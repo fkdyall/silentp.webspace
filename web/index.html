@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0a0d12">
+  <meta name="description" content="Silent P. PWSA — personal web application profiles with local-first controls.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg">
+  <link rel="stylesheet" href="./styles.css">
+  <title>Silent P. PWSA</title>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <button class="brand" id="homeButton" aria-label="Silent P. PWSA home">
+        <img class="brand-mark" src="./icons/icon.svg" alt="">
+        <span class="brand-copy">
+          <strong>Silent P.</strong>
+          <small>Progressive Webspace App</small>
+        </span>
+      </button>
+
+      <form class="omnibar" id="omnibar">
+        <span class="omnibar-shield" aria-hidden="true">◈</span>
+        <input id="urlInput" autocomplete="off" inputmode="url" spellcheck="false" placeholder="Enter a website address">
+        <button type="button" class="button subtle" id="tempButton">Temporary</button>
+        <button type="submit" class="button primary">Create profile</button>
+      </form>
+
+      <div class="header-actions">
+        <button class="icon-button" id="importButton" title="Import profiles" aria-label="Import profiles">⇧</button>
+        <button class="icon-button" id="exportButton" title="Export profiles" aria-label="Export profiles">⇩</button>
+        <button class="icon-button" id="themeButton" title="Toggle theme" aria-label="Toggle theme">◐</button>
+        <button class="icon-button" id="settingsButton" title="Project settings" aria-label="Project settings">⚙</button>
+        <input id="importFile" type="file" accept="application/json" hidden>
+      </div>
+    </header>
+
+    <section class="browser-bar" id="browserBar" hidden>
+      <div class="browser-nav">
+        <button class="icon-button" data-browser="back" title="Back" aria-label="Back">←</button>
+        <button class="icon-button" data-browser="forward" title="Forward" aria-label="Forward">→</button>
+        <button class="icon-button" data-browser="reload" title="Reload" aria-label="Reload">↻</button>
+      </div>
+      <div class="identity-pill">
+        <span class="identity-dot" id="browserIdentityDot"></span>
+        <span id="browserIdentity">Profile</span>
+      </div>
+      <form class="browser-address" id="browserAddressForm">
+        <span class="lock-mark">◇</span>
+        <input id="browserAddress" autocomplete="off" inputmode="url" spellcheck="false" aria-label="Current website address">
+      </form>
+      <span class="engine-pill" id="browserEngine">Chromium</span>
+      <button class="button subtle small" data-browser="desktop">Desktop mode</button>
+      <button class="button subtle small" data-browser="devtools">Inspect</button>
+      <button class="icon-button" data-browser="close" title="Close profile" aria-label="Close profile">×</button>
+    </section>
+
+    <div class="workspace">
+      <aside class="sidebar">
+        <div class="sidebar-heading">
+          <span>Webspaces</span>
+          <button class="icon-button compact" id="newSpaceButton" title="New webspace" aria-label="New webspace">＋</button>
+        </div>
+        <nav id="spaceList" class="space-list" aria-label="Webspaces"></nav>
+        <div class="sidebar-footer">
+          <div class="privacy-status">
+            <span class="status-light"></span>
+            <div><strong>Local-first</strong><small>Profiles stay on this device</small></div>
+          </div>
+          <button class="text-button" id="aboutButton">About &amp; boundaries</button>
+        </div>
+      </aside>
+
+      <main class="main" id="mainView">
+        <section class="hero">
+          <div>
+            <span class="eyebrow">PERSONAL WEB APPLICATIONS</span>
+            <h1>Every website gets its own identity.</h1>
+            <p>Create persistent or disposable website profiles with their own rendering, permissions, privacy settings, scripts, and compatibility rules.</p>
+          </div>
+          <div class="hero-metrics" aria-label="Project statistics">
+            <div><strong id="profileCount">0</strong><span>Profiles</span></div>
+            <div><strong id="spaceCount">0</strong><span>Webspaces</span></div>
+            <div><strong id="nativeStatus">Web</strong><span>Runtime</span></div>
+          </div>
+        </section>
+
+        <section class="toolbar">
+          <label class="filter">
+            <span aria-hidden="true">⌕</span>
+            <input id="filterInput" placeholder="Filter profiles" aria-label="Filter profiles">
+          </label>
+          <select id="sortSelect" class="select compact-select" aria-label="Sort profiles">
+            <option value="recent">Recently updated</option>
+            <option value="name">Name</option>
+            <option value="domain">Domain</option>
+          </select>
+          <button class="button subtle" id="newProfileButton">＋ New profile</button>
+        </section>
+
+        <section id="profileGrid" class="profile-grid" aria-live="polite"></section>
+
+        <section id="emptyState" class="empty-state" hidden>
+          <img class="empty-symbol" src="./icons/icon.svg" alt="">
+          <h2>No profiles in this webspace</h2>
+          <p>Enter a website above or create a blank profile.</p>
+          <button class="button primary" id="emptyCreateButton">Create first profile</button>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="overlay" id="editorOverlay" hidden>
+    <section class="drawer" role="dialog" aria-modal="true" aria-label="Site profile editor">
+      <header class="drawer-header">
+        <div>
+          <span class="eyebrow">SITE PROFILE</span>
+          <h2 id="editorHeading">New profile</h2>
+        </div>
+        <button class="icon-button" id="editorClose" aria-label="Close profile editor">×</button>
+      </header>
+      <div class="drawer-body">
+        <div class="form-grid">
+          <label class="field wide"><span>Profile name</span><input id="fieldName" autocomplete="off"></label>
+          <label class="field wide"><span>Start URL</span><input id="fieldUrl" class="mono" inputmode="url" autocomplete="off"></label>
+          <label class="field"><span>Webspace</span><select id="fieldSpace"></select></label>
+          <label class="field"><span>Accent</span><input id="fieldColor" type="color"></label>
+        </div>
+
+        <div class="section-title">Rendering</div>
+        <div class="choice-grid">
+          <label class="choice"><input type="radio" name="engine" value="automatic"><span><strong>Automatic</strong><small>Use the available native engine</small></span></label>
+          <label class="choice"><input type="radio" name="engine" value="chromium"><span><strong>Chromium</strong><small>Electron or Android WebView</small></span></label>
+          <label class="choice"><input type="radio" name="engine" value="gecko"><span><strong>Gecko</strong><small>Android GeckoView target</small></span></label>
+        </div>
+        <div class="form-grid">
+          <label class="field"><span>Render mode</span><select id="fieldRender"><option value="mobile">Mobile</option><option value="compat">Compatibility</option><option value="desktop">Modified desktop</option></select></label>
+          <label class="field"><span>User agent</span><select id="fieldUa"><option value="mobile">Mobile</option><option value="desktop">Desktop</option></select></label>
+          <label class="field"><span>External links</span><select id="fieldExternal"><option value="internal">Keep in profile</option><option value="temporary">Temporary profile</option><option value="external">External browser</option></select></label>
+          <label class="field"><span>Language</span><input id="fieldLanguage" value="en-US" autocomplete="off"></label>
+        </div>
+
+        <div class="section-title">Privacy defaults</div>
+        <div class="toggle-list">
+          <label><span><strong>Strip tracking parameters</strong><small>Remove common campaign identifiers before navigation</small></span><input id="privacyClearUrls" type="checkbox"></label>
+          <label><span><strong>Block known trackers</strong><small>Native session request interception</small></span><input id="privacyBlocking" type="checkbox"></label>
+          <label><span><strong>Send Global Privacy Control</strong><small>Add Sec-GPC and Do Not Track headers</small></span><input id="privacyGpc" type="checkbox"></label>
+          <label><span><strong>Restrict WebRTC</strong><small>Reduce local IP exposure; may affect calls</small></span><input id="privacyWebrtc" type="checkbox"></label>
+        </div>
+
+        <div class="section-title">Permissions</div>
+        <div id="permissionGrid" class="permission-grid"></div>
+
+        <label class="field wide"><span>Notes</span><textarea id="fieldNotes" rows="4"></textarea></label>
+      </div>
+      <footer class="drawer-footer">
+        <button class="button danger" id="deleteProfileButton">Delete</button>
+        <span class="grow"></span>
+        <button class="button subtle" id="cancelProfileButton">Cancel</button>
+        <button class="button primary" id="saveProfileButton">Save profile</button>
+      </footer>
+    </section>
+  </div>
+
+  <div class="overlay centered" id="modalOverlay" hidden>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <header class="drawer-header"><h2 id="modalTitle">Silent P. PWSA</h2><button class="icon-button" id="modalClose" aria-label="Close dialog">×</button></header>
+      <div class="drawer-body prose" id="modalBody"></div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+  <script src="./app.js"></script>
+</body>
+</html>
