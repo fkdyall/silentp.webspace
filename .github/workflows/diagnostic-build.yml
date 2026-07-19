@@ -1,7 +1,7 @@
 name: Capture packaging diagnostics
 
 # One-time collector. It records the command output and is intentionally non-failing.
-# Verification pass: implicit publishing disabled and desktop metadata corrected.
+# Verification pass: Windows portable alpha package.
 on:
   push:
     branches: [main]
@@ -12,8 +12,8 @@ permissions:
   contents: write
 
 jobs:
-  capture-linux:
-    runs-on: ubuntu-latest
+  capture-windows:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,33 +24,29 @@ jobs:
       - name: Install desktop dependencies
         working-directory: desktop
         run: npm install
-      - name: Capture Linux check and packaging output
-        shell: bash
+      - name: Capture Windows check and packaging output
+        shell: pwsh
         run: |
-          mkdir -p diagnostics
-          set +e
-          (
-            cd desktop
-            npm run check
-          ) > diagnostics/linux-check-output.txt 2>&1
-          echo "$?" > diagnostics/linux-check-exit.txt
-          (
-            cd desktop
-            npm run dist:linux
-          ) > diagnostics/linux-build-output.txt 2>&1
-          echo "$?" > diagnostics/linux-build-exit.txt
+          New-Item -ItemType Directory -Force -Path diagnostics | Out-Null
+          Push-Location desktop
+          cmd /c "npm run check > ..\diagnostics\windows-check-output.txt 2>&1"
+          $checkExit = $LASTEXITCODE
+          Set-Content -Path ../diagnostics/windows-check-exit.txt -Value $checkExit
+          cmd /c "npm run dist:win > ..\diagnostics\windows-build-output.txt 2>&1"
+          $buildExit = $LASTEXITCODE
+          Set-Content -Path ../diagnostics/windows-build-exit.txt -Value $buildExit
+          Pop-Location
           exit 0
-      - name: Commit captured logs without failing the workflow
-        shell: bash
+      - name: Commit captured output without failing the workflow
+        shell: pwsh
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin main || true
+          git pull --rebase origin main
           git add diagnostics
-          if git diff --cached --quiet; then
-            echo "No diagnostic changes to commit."
-          else
-            git commit -m "Capture Linux packaging diagnostic output"
-            git push || true
-          fi
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m "Capture Windows packaging diagnostic output"
+            git push
+          }
           exit 0
