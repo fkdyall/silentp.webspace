@@ -9,7 +9,7 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "check": "node --check main.js && node --check preload.js && node --check security.js && node --check ../web/app.js",
+    "check": "node --check main.js && node --check preload.js && node --check security.js && node --check ../web/app.js && node check-architecture.js",
     "dist:linux": "electron-builder --linux AppImage deb",
     "dist:win": "electron-builder --win nsis portable",
     "dist": "electron-builder"
@@ -29,6 +29,7 @@
       "main.js",
       "preload.js",
       "security.js",
+      "check-architecture.js",
       "package.json"
     ],
     "extraResources": [
