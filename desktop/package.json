@@ -2,7 +2,7 @@
   "name": "silent-p-pwsa-desktop",
   "productName": "Silent P. PWSA",
   "desktopName": "silent-p-pwsa.desktop",
-  "version": "0.3.0",
+  "version": "0.3.0-alpha.1",
   "description": "Desktop application for Silent P. Progressive Webspace App",
   "main": "main.js",
   "author": {
