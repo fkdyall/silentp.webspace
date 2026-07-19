@@ -1,0 +1,99 @@
+name: Build desktop alpha release once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/alpha-release.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run check
+      - run: npm run dist:linux
+      - uses: actions/upload-artifact@v4
+        with:
+          name: silent-p-pwsa-linux
+          path: desktop/dist/*.AppImage
+          if-no-files-found: error
+
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run check
+      - run: npm run dist:win
+      - uses: actions/upload-artifact@v4
+        with:
+          name: silent-p-pwsa-windows
+          path: desktop/dist/*windows-portable*.exe
+          if-no-files-found: error
+
+  release:
+    needs: [linux, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "silent-p-pwsa-*"
+          path: release-assets
+          merge-multiple: true
+      - name: Create or update the alpha pre-release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: v0.3.0-alpha.1
+        run: |
+          cat > release-notes.md <<'EOF'
+          # Silent P. PWSA v0.3.0-alpha.1
+
+          Structural desktop alpha for direct testing.
+
+          Included:
+          - Linux x86_64 AppImage
+          - Windows x64 portable executable
+          - Multiple tabs and multiple windows
+          - Independent persistent session partition for every tab
+          - Per-tab Hardened, Balanced, Compatibility, and Custom controls
+          - Per-tab Keep Active and parking controls
+          - Parent-tab-only authentication popup sessions
+          - Exit & Free Resources control
+
+          Not yet approved as production-ready:
+          - Full maintained filter-list engine
+          - Completed third-party-cookie enforcement matrix
+          - Full compatibility and CPU testing on the ASUS
+          - Android APK
+
+          This release is for functional testing and defect reporting.
+          EOF
+
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" release-assets/* --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$TAG" release-assets/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "Silent P. PWSA v0.3.0-alpha.1" \
+              --notes-file release-notes.md \
+              --prerelease
+          fi
