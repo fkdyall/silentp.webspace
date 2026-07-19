@@ -31,12 +31,12 @@ jobs:
           (
             cd desktop
             npm run check
-          ) > diagnostics/linux-check.log 2>&1
+          ) > diagnostics/linux-check-output.txt 2>&1
           echo "$?" > diagnostics/linux-check-exit.txt
           (
             cd desktop
             npm run dist:linux
-          ) > diagnostics/linux-build.log 2>&1
+          ) > diagnostics/linux-build-output.txt 2>&1
           echo "$?" > diagnostics/linux-build-exit.txt
           exit 0
       - name: Commit captured logs without failing the workflow
@@ -49,7 +49,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No diagnostic changes to commit."
           else
-            git commit -m "Capture Linux packaging diagnostic log"
+            git commit -m "Capture Linux packaging diagnostic output"
             git push || true
           fi
           exit 0
