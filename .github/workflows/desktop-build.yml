@@ -13,6 +13,7 @@ on:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
@@ -28,8 +29,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: desktop/package.json
       - run: npm install
       - run: npm run check
       - run: npm run ${{ matrix.command }}
@@ -39,3 +38,5 @@ jobs:
         with:
           name: silent-p-pwsa-${{ runner.os }}
           path: desktop/dist/*
+          if-no-files-found: error
+          retention-days: 14
