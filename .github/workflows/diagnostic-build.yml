@@ -1,0 +1,89 @@
+name: Capture packaging diagnostics
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/diagnostic-build.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - name: Capture Linux packaging output
+        shell: bash
+        run: |
+          mkdir -p ../diagnostics
+          set +e
+          npm run check > ../diagnostics/linux-check.log 2>&1
+          echo "$?" > ../diagnostics/linux-check-exit.txt
+          npm run dist:linux > ../diagnostics/linux-build.log 2>&1
+          echo "$?" > ../diagnostics/linux-build-exit.txt
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-diagnostics
+          path: diagnostics/*
+
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - name: Capture Windows packaging output
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path ../diagnostics | Out-Null
+          cmd /c "npm run check > ..\diagnostics\windows-check.log 2>&1"
+          $checkExit = $LASTEXITCODE
+          Set-Content -Path ../diagnostics/windows-check-exit.txt -Value $checkExit
+          cmd /c "npm run dist:win > ..\diagnostics\windows-build.log 2>&1"
+          $buildExit = $LASTEXITCODE
+          Set-Content -Path ../diagnostics/windows-build-exit.txt -Value $buildExit
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-diagnostics
+          path: diagnostics/*
+
+  commit-diagnostics:
+    needs: [linux, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "*-diagnostics"
+          path: diagnostics
+          merge-multiple: true
+      - name: Commit captured logs
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add diagnostics
+          if git diff --cached --quiet; then
+            echo "No diagnostic changes to commit."
+          else
+            git commit -m "Capture packaging diagnostic logs"
+            git push
+          fi
