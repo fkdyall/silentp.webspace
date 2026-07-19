@@ -1,12 +1,9 @@
 name: Publish interface preview
 
+# Manual-only while the alpha interface is still changing.
+# This prevents every web commit from launching a Pages deployment.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "web/**"
-      - ".github/workflows/pages.yml"
 
 permissions:
   contents: read
