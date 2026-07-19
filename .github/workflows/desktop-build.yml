@@ -1,0 +1,41 @@
+name: Build desktop packages
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, "silentp/**"]
+    paths:
+      - "desktop/**"
+      - "web/**"
+      - "shared/**"
+      - ".github/workflows/desktop-build.yml"
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            command: dist:linux
+          - os: windows-latest
+            command: dist:win
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package.json
+      - run: npm install
+      - run: npm run check
+      - run: npm run ${{ matrix.command }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: silent-p-pwsa-${{ runner.os }}
+          path: desktop/dist/*
