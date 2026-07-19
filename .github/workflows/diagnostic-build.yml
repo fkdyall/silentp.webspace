@@ -1,6 +1,7 @@
 name: Capture packaging diagnostics
 
 # One-time collector. It records the command output and is intentionally non-failing.
+# Verification pass: implicit publishing disabled and desktop metadata corrected.
 on:
   push:
     branches: [main]
