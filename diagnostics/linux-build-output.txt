@@ -1,0 +1,24 @@
+
+> silent-p-pwsa-desktop@0.3.0 dist:linux
+> electron-builder --linux AppImage
+
+  • electron-builder  version=26.15.3 os=6.17.0-1020-azure
+  • Implicit publishing triggered by CI detection. This behavior will be disabled in electron-builder v27. Please use --publish explicitly.
+  • loaded configuration  file=package.json ("build" field)
+  • executing @electron/rebuild  electronVersion=43.1.1 arch=x64 buildFromSource=false workspaceRoot=/home/runner/work/silentp.webspace/silentp.webspace/desktop projectDir=./ appDir=./
+  • installing native dependencies  arch=x64
+  • completed installing native dependencies
+  • packaging       platform=linux arch=x64 electron=43.1.1 appOutDir=dist/linux-unpacked
+  • downloaded      label=electron progress=100%
+  • downloaded electron zip extracted successfully  output=/home/runner/work/silentp.webspace/silentp.webspace/desktop/dist/linux-unpacked
+  • searching for node modules  pm=npm searchDir=/home/runner/work/silentp.webspace/silentp.webspace/desktop
+  • searching for node modules  pm=traversal searchDir=/home/runner/work/silentp.webspace/silentp.webspace/desktop
+  • using manual traversal of node_modules to build dependency tree
+  • no node modules returned while searching directories  searchDirectories=[""]
+  • building        target=AppImage arch=x64 file=dist/Silent-P-PWSA-0.3.0-linux-x86_64.AppImage
+  • electron uses desktopName as app_id / WM_CLASS for window association. Without it desktop environments may not link running windows to this .desktop entry. Set desktopName in package.json and linux.syncDesktopName: true to fix.  reason=desktopName is not set in package.json docs=https://www.electron.build/linux#window-association-desktopname--syncdesktopname
+  • default Electron icon is used  reason=application icon is not set
+  • downloaded      label=appimage-12.0.1.7z progress=100%
+  • downloaded      label=7zip-linux-x64.tar.gz progress=100%
+  • building embedded block map  file=dist/Silent-P-PWSA-0.3.0-linux-x86_64.AppImage
+  ⨯ GitHub Personal Access Token is not set, neither programmatically, nor using env "GH_TOKEN"

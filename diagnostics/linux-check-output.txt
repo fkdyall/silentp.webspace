@@ -1,0 +1,5 @@
+
+> silent-p-pwsa-desktop@0.3.0 check
+> node --check main.js && node --check preload.js && node --check security.js && node --check ../web/app.js && node check-architecture.js
+
+Architecture checks passed (13 requirements).
