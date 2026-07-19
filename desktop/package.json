@@ -1,6 +1,7 @@
 {
   "name": "silent-p-pwsa-desktop",
   "productName": "Silent P. PWSA",
+  "desktopName": "silent-p-pwsa.desktop",
   "version": "0.3.0",
   "description": "Desktop application for Silent P. Progressive Webspace App",
   "main": "main.js",
@@ -18,11 +19,11 @@
   "scripts": {
     "start": "electron .",
     "check": "node --check main.js && node --check preload.js && node --check security.js && node --check ../web/app.js && node check-architecture.js",
-    "dist:linux": "electron-builder --linux AppImage",
-    "dist:win": "electron-builder --win portable",
-    "dist:linux:all": "electron-builder --linux AppImage deb",
-    "dist:win:all": "electron-builder --win nsis portable",
-    "dist": "electron-builder"
+    "dist:linux": "electron-builder --linux AppImage --publish never",
+    "dist:win": "electron-builder --win portable --publish never",
+    "dist:linux:all": "electron-builder --linux AppImage deb --publish never",
+    "dist:win:all": "electron-builder --win nsis portable --publish never",
+    "dist": "electron-builder --publish never"
   },
   "devDependencies": {
     "electron": "43.1.1",
@@ -57,14 +58,15 @@
         "AppImage"
       ],
       "category": "Network",
-      "icon": "icon-512.png",
-      "maintainer": "Silent P. <252804653+fkdyall@users.noreply.github.com>"
+      "icon": "assets/icon-512.png",
+      "maintainer": "Silent P. <252804653+fkdyall@users.noreply.github.com>",
+      "syncDesktopName": true
     },
     "win": {
       "target": [
         "portable"
       ],
-      "icon": "icon.ico"
+      "icon": "assets/icon.ico"
     },
     "appImage": {
       "artifactName": "Silent-P-PWSA-${version}-linux-${arch}.${ext}"
