@@ -4,14 +4,24 @@
   "version": "0.3.0",
   "description": "Desktop application for Silent P. Progressive Webspace App",
   "main": "main.js",
-  "author": "Silent P.",
+  "author": {
+    "name": "Silent P.",
+    "email": "252804653+fkdyall@users.noreply.github.com"
+  },
+  "homepage": "https://github.com/fkdyall/silentp.webspace",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fkdyall/silentp.webspace.git"
+  },
   "license": "MIT",
   "private": true,
   "scripts": {
     "start": "electron .",
     "check": "node --check main.js && node --check preload.js && node --check security.js && node --check ../web/app.js && node check-architecture.js",
-    "dist:linux": "electron-builder --linux AppImage deb",
-    "dist:win": "electron-builder --win nsis portable",
+    "dist:linux": "electron-builder --linux AppImage",
+    "dist:win": "electron-builder --win portable",
+    "dist:linux:all": "electron-builder --linux AppImage deb",
+    "dist:win:all": "electron-builder --win nsis portable",
     "dist": "electron-builder"
   },
   "devDependencies": {
@@ -21,6 +31,7 @@
   "build": {
     "appId": "com.fypm.silentpwebspace",
     "productName": "Silent P. PWSA",
+    "executableName": "silent-p-pwsa",
     "directories": {
       "output": "dist",
       "buildResources": "assets"
@@ -43,17 +54,32 @@
     ],
     "linux": {
       "target": [
-        "AppImage",
-        "deb"
+        "AppImage"
       ],
-      "category": "Network;WebBrowser"
+      "category": "Network",
+      "icon": "icon-512.png",
+      "maintainer": "Silent P. <252804653+fkdyall@users.noreply.github.com>"
     },
     "win": {
       "target": [
-        "nsis",
         "portable"
-      ]
+      ],
+      "icon": "icon.ico"
     },
-    "artifactName": "Silent-P-PWSA-${version}-${os}-${arch}.${ext}"
+    "appImage": {
+      "artifactName": "Silent-P-PWSA-${version}-linux-${arch}.${ext}"
+    },
+    "deb": {
+      "artifactName": "Silent-P-PWSA-${version}-linux-${arch}.${ext}",
+      "maintainer": "Silent P. <252804653+fkdyall@users.noreply.github.com>"
+    },
+    "portable": {
+      "artifactName": "Silent-P-PWSA-${version}-windows-portable-${arch}.${ext}"
+    },
+    "nsis": {
+      "artifactName": "Silent-P-PWSA-${version}-windows-setup-${arch}.${ext}",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }
