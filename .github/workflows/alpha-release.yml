@@ -1,10 +1,7 @@
-name: Build desktop alpha release once
+name: Build desktop alpha release
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/alpha-release.yml"
+  workflow_dispatch:
 
 permissions:
   contents: write
