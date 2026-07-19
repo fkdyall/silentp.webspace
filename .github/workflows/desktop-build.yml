@@ -1,14 +1,9 @@
 name: Build desktop packages
 
+# Manual-only while the alpha architecture is still changing.
+# This prevents every source commit from launching Linux and Windows builds.
 on:
   workflow_dispatch:
-  push:
-    branches: [main, "silentp/**"]
-    paths:
-      - "desktop/**"
-      - "web/**"
-      - "shared/**"
-      - ".github/workflows/desktop-build.yml"
 
 jobs:
   build:
