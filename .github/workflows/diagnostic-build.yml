@@ -1,12 +1,8 @@
 name: Capture packaging diagnostics
 
-# One-time collector. It records the command output and is intentionally non-failing.
-# Verification pass: Windows portable alpha package.
+# Manual-only diagnostic collector. No commits automatically run it.
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/diagnostic-build.yml"
+  workflow_dispatch:
 
 permissions:
   contents: write
