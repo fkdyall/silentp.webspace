@@ -1,0 +1,5 @@
+desktop/node_modules/
+desktop/dist/
+.vercel/
+*.log
+.DS_Store
