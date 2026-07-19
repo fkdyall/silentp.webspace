@@ -1,15 +1,15 @@
 {
   "name": "silent-p-pwsa-desktop",
   "productName": "Silent P. PWSA",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Desktop application for Silent P. Progressive Webspace App",
-  "main": "main.js",
+  "main": "companion-bootstrap.js",
   "author": "Silent P.",
   "license": "MIT",
   "private": true,
   "scripts": {
     "start": "electron .",
-    "check": "node --check main.js && node --check preload.js && node --check security.js && node --check ../web/app.js",
+    "check": "node --check companion-bootstrap.js && node --check main.js && node --check preload.js && node --check security.js && node --check ../web/app.js",
     "dist:linux": "electron-builder --linux AppImage deb",
     "dist:win": "electron-builder --win nsis portable",
     "dist": "electron-builder"
@@ -26,6 +26,7 @@
       "buildResources": "assets"
     },
     "files": [
+      "companion-bootstrap.js",
       "main.js",
       "preload.js",
       "security.js",
