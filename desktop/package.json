@@ -1,0 +1,50 @@
+{
+  "name": "silent-p-pwsa-desktop",
+  "productName": "Silent P. PWSA",
+  "version": "0.1.0",
+  "description": "Desktop application for Silent P. Progressive Webspace App",
+  "main": "main.js",
+  "author": "Silent P.",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "check": "node --check main.js && node --check preload.js && node --check security.js && node --check ../web/app.js",
+    "dist:linux": "electron-builder --linux AppImage deb",
+    "dist:win": "electron-builder --win nsis portable",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "43.1.1",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "com.fypm.silentpwebspace",
+    "productName": "Silent P. PWSA",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "security.js",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../web",
+        "to": "web",
+        "filter": ["**/*"]
+      }
+    ],
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Network;WebBrowser"
+    },
+    "win": {
+      "target": ["nsis", "portable"]
+    },
+    "artifactName": "Silent-P-PWSA-${version}-${os}-${arch}.${ext}"
+  }
+}
