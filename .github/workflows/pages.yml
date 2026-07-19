@@ -1,8 +1,11 @@
 name: Publish interface preview
 
-# Manual-only while the alpha interface is still changing.
-# This prevents every web commit from launching a Pages deployment.
+# One-time deployment trigger. This will be returned to manual-only after verification.
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:
