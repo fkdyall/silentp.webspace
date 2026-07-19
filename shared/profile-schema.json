@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://silentp.local/schemas/profile.json",
+  "title": "Silent P. PWSA Site Profile",
+  "type": "object",
+  "required": ["id", "name", "url", "domain", "engine", "renderMode", "privacy", "permissions"],
+  "properties": {
+    "id": {"type": "string"},
+    "spaceId": {"type": "string"},
+    "name": {"type": "string"},
+    "url": {"type": "string", "format": "uri"},
+    "domain": {"type": "string"},
+    "color": {"type": "string"},
+    "temporary": {"type": "boolean"},
+    "engine": {"enum": ["automatic", "chromium", "gecko"]},
+    "renderMode": {"enum": ["mobile", "compat", "desktop"]},
+    "uaPreset": {"enum": ["mobile", "desktop"]},
+    "language": {"type": "string"},
+    "externalLinkBehavior": {"enum": ["internal", "temporary", "external"]},
+    "privacy": {
+      "type": "object",
+      "properties": {
+        "clearUrls": {"type": "boolean"},
+        "blocking": {"type": "boolean"},
+        "gpc": {"type": "boolean"},
+        "webrtc": {"type": "boolean"}
+      }
+    },
+    "permissions": {"type": "object", "additionalProperties": {"type": "boolean"}},
+    "notes": {"type": "string"},
+    "createdAt": {"type": "integer"},
+    "updatedAt": {"type": "integer"}
+  }
+}
