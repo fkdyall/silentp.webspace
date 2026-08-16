@@ -78,6 +78,21 @@ function normalizeBrowserState(value) {
   };
 }
 
+function serializableBrowserState(value) {
+  const normalized = normalizeBrowserState(value);
+  const persistentContainers = normalized.containers.filter((container) => !container.temporary);
+  const persistentIds = new Set(persistentContainers.map((container) => container.id));
+  const windows = normalized.windows.map((windowRecord) => {
+    const tabs = (Array.isArray(windowRecord.tabs) ? windowRecord.tabs : [])
+      .filter((tab) => !tab.temporary && persistentIds.has(tab.containerId));
+    const activeTabId = tabs.some((tab) => tab.id === windowRecord.activeTabId)
+      ? windowRecord.activeTabId
+      : tabs[0]?.id || null;
+    return { ...windowRecord, activeTabId, tabs };
+  });
+  return { version: 2, containers: persistentContainers, windows };
+}
+
 function readJson(filePath) {
   try {
     return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -98,12 +113,13 @@ function loadBrowserState({ browserStatePath, legacyStatePath }) {
 function saveBrowserState(filePath, state) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   const temporaryPath = `${filePath}.tmp`;
-  fs.writeFileSync(temporaryPath, JSON.stringify(state, null, 2), 'utf8');
+  fs.writeFileSync(temporaryPath, JSON.stringify(serializableBrowserState(state), null, 2), 'utf8');
   fs.renameSync(temporaryPath, filePath);
 }
 
 module.exports = {
   emptyBrowserState,
+  serializableBrowserState,
   migrateLegacyDesktopState,
   loadBrowserState,
   saveBrowserState

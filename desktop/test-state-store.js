@@ -74,6 +74,27 @@ try {
 
   const loadedV2 = loadBrowserState({ browserStatePath, legacyStatePath });
   assert.deepEqual(loadedV2, migrated);
+
+  const persistent = migrated.containers[0];
+  const temporary = { ...migrated.containers[1], id: 'temp-private', temporary: true, partitionKey: 'fypm-temp-private' };
+  saveBrowserState(browserStatePath, {
+    version: 2,
+    containers: [persistent, temporary],
+    windows: [{
+      id: 'restore-window',
+      activeTabId: 'private-tab',
+      tabs: [
+        { id: 'shared-one', containerId: persistent.id, url: 'https://chatgpt.com/' },
+        { id: 'shared-two', containerId: persistent.id, url: 'https://chatgpt.com/c/2' },
+        { id: 'private-tab', containerId: temporary.id, url: 'https://example.com/', temporary: true }
+      ]
+    }]
+  });
+  const filtered = JSON.parse(fs.readFileSync(browserStatePath, 'utf8'));
+  assert.deepEqual(filtered.containers.map((container) => container.id), [persistent.id]);
+  assert.deepEqual(filtered.windows[0].tabs.map((tab) => tab.id), ['shared-one', 'shared-two']);
+  assert.equal(filtered.windows[0].activeTabId, 'shared-one');
+  assert.equal(filtered.containers[0].partitionKey, persistent.partitionKey);
 } finally {
   fs.rmSync(temporaryDirectory, { recursive: true, force: true });
 }
