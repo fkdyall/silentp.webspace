@@ -509,6 +509,18 @@
       if (notice?.message) showToast(notice.message);
     });
 
+    window.silentP.onDownloadsChanged((download) => {
+      const chip = $('#downloadChip');
+      const total = Math.max(0, Number(download.totalBytes) || 0);
+      const received = Math.max(0, Number(download.receivedBytes) || 0);
+      const percent = total ? ` ${Math.min(100, Math.round(received / total * 100))}%` : '';
+      chip.textContent = `${download.filename}: ${download.state}${percent}`;
+      chip.hidden = false;
+      if (download.state === 'completed' || download.state === 'cancelled' || download.state === 'interrupted') {
+        setTimeout(() => { chip.hidden = true; }, 5000);
+      }
+    });
+
     window.silentP.listTabs().then((initial) => {
       tabState = initial;
       renderNativeTabs();

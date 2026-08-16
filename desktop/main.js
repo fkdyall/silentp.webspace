@@ -8,7 +8,9 @@ const {
   WebContentsView,
   session,
   ipcMain,
-  shell
+  shell,
+  Menu,
+  clipboard
 } = require('electron');
 const { stripTracking, shouldBlock } = require('./security');
 const {
@@ -19,6 +21,7 @@ const {
   setContainerPermission
 } = require('./container-model');
 const { loadBrowserState, saveBrowserState } = require('./state-store');
+const { contextActionIds } = require('./context-menu');
 
 const APP_ID = 'com.fypm.silentpwebspace';
 const VERSION = '0.3';
@@ -158,6 +161,27 @@ function configureSession(profileSession, partition) {
   );
 
   profileSession.setDisplayMediaRequestHandler((_request, callback) => callback({}));
+
+  profileSession.on('will-download', (_event, item) => {
+    const downloadId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const sendDownload = (state) => {
+      const containerId = partitionContainerIds.get(partition);
+      for (const windowState of windows.values()) {
+        if (![...windowState.tabs.values()].some((tab) => tab.containerId === containerId)) continue;
+        sendToWindow(windowState, 'downloads:changed', {
+          id: downloadId,
+          filename: item.getFilename(),
+          state,
+          receivedBytes: item.getReceivedBytes(),
+          totalBytes: item.getTotalBytes(),
+          savePath: item.getSavePath() || ''
+        });
+      }
+    };
+    sendDownload('started');
+    item.on('updated', (_updatedEvent, state) => sendDownload(state));
+    item.once('done', (_doneEvent, state) => sendDownload(state));
+  });
 }
 
 function serializedTab(tab) {
@@ -316,6 +340,29 @@ function popupAllowed(tab) {
   );
 }
 
+function showTabContextMenu(state, tab, contents, params) {
+  const navigation = contents.navigationHistory;
+  const actions = contextActionIds(params, {
+    canGoBack: navigation.canGoBack(),
+    canGoForward: navigation.canGoForward()
+  });
+  const items = {
+    cut: { label: 'Cut', role: 'cut' },
+    copy: { label: 'Copy', role: 'copy' },
+    paste: { label: 'Paste', role: 'paste' },
+    selectAll: { label: 'Select All', role: 'selectAll' },
+    openLink: {
+      label: 'Open Link in New Tab',
+      click: () => createTab(state, { containerId: tab.containerId, url: params.linkURL }).catch(console.error)
+    },
+    copyLink: { label: 'Copy Link', click: () => clipboard.writeText(params.linkURL) },
+    back: { label: 'Back', click: () => navigation.goBack() },
+    forward: { label: 'Forward', click: () => navigation.goForward() },
+    reload: { label: 'Reload', click: () => contents.reload() }
+  };
+  Menu.buildFromTemplate(actions.map((action) => items[action])).popup({ window: state.browserWindow });
+}
+
 function createTabView(state, tab) {
   if (tab.view && !tab.view.webContents.isDestroyed()) return tab.view;
 
@@ -345,6 +392,7 @@ function createTabView(state, tab) {
   const desktop = container.renderMode === 'desktop' || container.uaPreset === 'desktop';
   contents.setUserAgent(desktop ? DESKTOP_UA : MOBILE_UA);
   contents.setBackgroundThrottling(!tab.keepActive);
+  contents.on('context-menu', (_event, params) => showTabContextMenu(state, tab, contents, params));
 
   contents.setWindowOpenHandler((details) => {
     const target = validatedWebUrl(details.url);

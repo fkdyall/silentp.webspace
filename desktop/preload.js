@@ -44,5 +44,10 @@ contextBridge.exposeInMainWorld('silentP', {
     const handler = (_event, notice) => callback(notice);
     ipcRenderer.on('browser:notice', handler);
     return () => ipcRenderer.removeListener('browser:notice', handler);
+  },
+  onDownloadsChanged: (callback) => {
+    const handler = (_event, download) => callback(download);
+    ipcRenderer.on('downloads:changed', handler);
+    return () => ipcRenderer.removeListener('downloads:changed', handler);
   }
 });

@@ -173,6 +173,7 @@ button{color:inherit}
 .identity-pill span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .identity-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}
 .preset-select{font-size:11px;max-width:135px}
+.download-chip{max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:7px 9px;border:1px solid rgba(104,225,197,.3);border-radius:8px;background:rgba(104,225,197,.08);color:var(--accent);font-size:10px}
 .permission-popover{position:absolute;right:180px;top:56px;width:260px;z-index:80;padding:14px;background:var(--panel3);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
 .permission-popover>strong,.permission-popover>small{display:block}.permission-popover>small{color:var(--muted);margin:3px 0 10px}
 .permission-popover label{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-top:1px solid var(--line2);font-size:11px}
