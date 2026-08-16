@@ -1,5 +1,6 @@
 'use strict';
 
+const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const {
@@ -20,7 +21,7 @@ const {
   applyPreset,
   setContainerPermission
 } = require('./container-model');
-const { loadBrowserState, saveBrowserState } = require('./state-store');
+const { loadBrowserState, saveBrowserState, legacyUserDataPath } = require('./state-store');
 const { contextActionIds } = require('./context-menu');
 
 const APP_ID = 'com.fypm.silentpwebspace';
@@ -38,6 +39,9 @@ let shuttingDown = false;
 let saveTimer = null;
 
 app.setAppUserModelId(APP_ID);
+const migrationUserDataPath = legacyUserDataPath(app.getPath('appData'));
+fs.mkdirSync(migrationUserDataPath, { recursive: true });
+app.setPath('userData', migrationUserDataPath);
 app.commandLine.appendSwitch('enable-features', 'GlobalPrivacyControl');
 app.commandLine.appendSwitch('force-webrtc-ip-handling-policy', 'disable_non_proxied_udp');
 

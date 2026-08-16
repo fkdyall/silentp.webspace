@@ -7,8 +7,14 @@ const path = require('path');
 const {
   migrateLegacyDesktopState,
   loadBrowserState,
-  saveBrowserState
+  saveBrowserState,
+  legacyUserDataPath
 } = require('./state-store');
+
+assert.equal(
+  legacyUserDataPath('/home/tester/.config'),
+  path.join('/home/tester/.config', 'Silent P. PWSA')
+);
 
 const legacyWindows = [{
   id: 'win_1',

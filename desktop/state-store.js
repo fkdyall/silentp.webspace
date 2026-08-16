@@ -12,6 +12,10 @@ function emptyBrowserState() {
   return { version: 2, containers: [], windows: [] };
 }
 
+function legacyUserDataPath(appDataPath) {
+  return path.join(appDataPath, 'Silent P. PWSA');
+}
+
 function legacyProfileToContainer(saved, containerId, partitionKey) {
   const profile = saved.profile || {};
   return normalizeContainer({
@@ -119,6 +123,7 @@ function saveBrowserState(filePath, state) {
 
 module.exports = {
   emptyBrowserState,
+  legacyUserDataPath,
   serializableBrowserState,
   migrateLegacyDesktopState,
   loadBrowserState,
