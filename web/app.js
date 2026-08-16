@@ -105,7 +105,11 @@
 
   async function renderChrome() {
     const selected = activeTab();
-    $('#tabList').innerHTML = tabState.tabs.map((tab) => `
+    const newTab = selected ? '' : `
+      <button class="tab active" role="tab" aria-selected="true">
+        <span class="tab-dot" style="--tab-color:#7cf0d2"></span><span class="tab-title">New Tab</span>
+      </button>`;
+    $('#tabList').innerHTML = newTab + tabState.tabs.map((tab) => `
       <button class="tab ${tab.id === tabState.activeTabId ? 'active' : ''} ${tab.parked ? 'parked' : ''}" data-tab-id="${tab.id}" role="tab" aria-selected="${tab.id === tabState.activeTabId}">
         <span class="tab-dot" style="--tab-color:${escapeHtml(tab.color)}"></span>
         <span class="tab-title">${escapeHtml(tab.title || 'New tab')}</span>
@@ -132,7 +136,9 @@
 
   async function openWithContainer(containerId, url) {
     closePopovers();
-    await native.openTab({ containerId, url });
+    const selected = activeTab();
+    if (selected?.containerId === containerId) await native.navigate(url);
+    else await native.openTab({ containerId, url });
   }
 
   async function createForUrl(url, temporary) {
@@ -183,14 +189,24 @@
     );
   }
 
-  function openContainerDialog(container = null) {
+  function populateContainerForm(container = null) {
     $('#containerId').value = container?.id || '';
-    $('#containerDialogTitle').textContent = container ? 'Edit container' : 'New isolated container';
     $('#containerFieldName').value = container?.name || '';
     $('#containerFieldUrl').value = container?.primaryUrl || '';
     $('#containerFieldDomains').value = (container?.domainRules || []).map((rule) => `${rule.type === 'suffix' ? '*.' : ''}${rule.value}`).join('\n');
     $('#containerFieldPreset').value = container?.privacyPreset || 'hardened';
     $('#deleteContainerButton').hidden = !container;
+  }
+
+  function openContainerDialog(container = null, managing = false) {
+    $('#containerDialogTitle').textContent = container ? 'Edit container' : 'New isolated container';
+    $('#containerPickerRow').hidden = !managing;
+    if (managing) {
+      const saved = containers.filter((candidate) => !candidate.temporary);
+      $('#containerPicker').innerHTML = saved.map((candidate) => `<option value="${escapeHtml(candidate.id)}">${escapeHtml(candidate.name)}</option>`).join('');
+      $('#containerPicker').value = container?.id || saved[0]?.id || '';
+    }
+    populateContainerForm(container);
     $('#containerDialog').showModal();
   }
 
@@ -279,10 +295,18 @@
   $('#keepActiveMenuItem').onclick = async () => { const tab = activeTab(); if (tab) await native.setKeepActive(tab.id, !tab.keepActive); closePopovers(); };
   $('#parkTabMenuItem').onclick = async () => { const tab = activeTab(); if (tab) await native.parkTab(tab.id); closePopovers(); };
   $('#releaseInactiveMenuItem').onclick = async () => { const count = await native.releaseInactiveTabs(); showToast(`${count} inactive tabs released`); closePopovers(); };
-  $('#manageContainersMenuItem').onclick = () => { closePopovers(); openContainerDialog(containers.find((container) => !container.temporary) || null); };
+  $('#manageContainersMenuItem').onclick = async () => {
+    closePopovers();
+    await native.showDashboard();
+    openContainerDialog(containers.find((container) => !container.temporary) || null, true);
+  };
   $('#newWindowMenuItem').onclick = () => { native.newWindow(); closePopovers(); };
   $('#quitReleaseMenuItem').onclick = () => native.quitAndRelease();
   $('#createContainerButton').onclick = () => openContainerDialog();
+  $('#containerPicker').onchange = (event) => {
+    const container = containers.find((candidate) => candidate.id === event.target.value) || null;
+    populateContainerForm(container);
+  };
   document.querySelectorAll('[data-close-popover]').forEach((button) => { button.onclick = closePopovers; });
 
   $('#containerForm').onsubmit = async (event) => {

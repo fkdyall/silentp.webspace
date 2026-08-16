@@ -70,6 +70,7 @@
     <form method="dialog" class="dialog-shell" id="containerForm">
       <header><div><p class="eyebrow">ISOLATED IDENTITY</p><h2 id="containerDialogTitle">Container</h2></div><button value="cancel" aria-label="Close">×</button></header>
       <input type="hidden" id="containerId">
+      <label id="containerPickerRow" hidden>Saved containers<select id="containerPicker"></select></label>
       <label>Name<input id="containerFieldName" required></label>
       <label>Home address<input id="containerFieldUrl" inputmode="url"></label>
       <label>Related domains <small>One per line. Prefix suffix matches with <code>*.</code>.</small><textarea id="containerFieldDomains" rows="5"></textarea></label>

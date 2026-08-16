@@ -711,14 +711,21 @@ ipcMain.handle('containers:update', (_event, containerId, changes = {}) => {
   return publicContainer(updated);
 });
 
-ipcMain.handle('containers:remove', (_event, containerId) => {
+ipcMain.handle('containers:remove', async (_event, containerId) => {
   const inUse = [...windows.values()].some((state) =>
     [...state.tabs.values()].some((tab) => tab.containerId === containerId)
   );
   if (inUse) return false;
-  const removed = containers.delete(containerId);
-  if (removed) saveDesktopStateSoon();
-  return removed;
+  const container = containers.get(containerId);
+  if (!container) return false;
+  const partition = partitionForContainer(container);
+  const containerSession = session.fromPartition(partition, { cache: !container.temporary });
+  await Promise.allSettled([containerSession.clearStorageData(), containerSession.clearCache()]);
+  configuredPartitions.delete(partition);
+  partitionContainerIds.delete(partition);
+  containers.delete(containerId);
+  saveDesktopStateSoon();
+  return true;
 });
 
 ipcMain.handle('containers:route-url', (_event, input) => {
