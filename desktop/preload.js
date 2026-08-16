@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('silentP', {
   createContainer: (input) => ipcRenderer.invoke('containers:create', input),
   updateContainer: (containerId, changes) => ipcRenderer.invoke('containers:update', containerId, changes),
   removeContainer: (containerId) => ipcRenderer.invoke('containers:remove', containerId),
+  clearContainer: (containerId) => ipcRenderer.invoke('containers:clear', containerId),
   routeUrl: (url) => ipcRenderer.invoke('containers:route-url', url),
   getActiveContainer: () => ipcRenderer.invoke('containers:get-active'),
   setContainerPermission: (containerId, permission, allowed) =>

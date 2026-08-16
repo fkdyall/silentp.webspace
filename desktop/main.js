@@ -728,6 +728,14 @@ ipcMain.handle('containers:remove', async (_event, containerId) => {
   return true;
 });
 
+ipcMain.handle('containers:clear', async (_event, containerId) => {
+  const container = containers.get(containerId);
+  if (!container) return false;
+  const containerSession = session.fromPartition(partitionForContainer(container), { cache: !container.temporary });
+  await Promise.all([containerSession.clearStorageData(), containerSession.clearCache()]);
+  return true;
+});
+
 ipcMain.handle('containers:route-url', (_event, input) => {
   const url = validatedWebUrl(input);
   if (!url) return { action: 'invalid', url: String(input || '') };

@@ -196,6 +196,7 @@
     $('#containerFieldDomains').value = (container?.domainRules || []).map((rule) => `${rule.type === 'suffix' ? '*.' : ''}${rule.value}`).join('\n');
     $('#containerFieldPreset').value = container?.privacyPreset || 'hardened';
     $('#deleteContainerButton').hidden = !container;
+    $('#clearContainerButton').hidden = !container;
   }
 
   function openContainerDialog(container = null, managing = false) {
@@ -332,6 +333,12 @@
     if (!removed) return showToast('Close every tab using this container before deleting it');
     $('#containerDialog').close();
     await refreshContainers();
+  };
+  $('#clearContainerButton').onclick = async () => {
+    const id = $('#containerId').value;
+    if (!id || !confirm('Clear cookies, logins, cache, and site storage for this container?')) return;
+    await native.clearContainer(id);
+    showToast('Container site data cleared');
   };
 
   document.addEventListener('keydown', async (event) => {
