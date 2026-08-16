@@ -19,6 +19,7 @@
   const uid = (prefix) => `${prefix}_${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}`.replaceAll('-','').slice(0,24);
 
   let tabState = { tabs: [], activeTabId: null, windowId: null };
+  let activeContainer = null;
   let editingId = null;
   let toastTimer = null;
 
@@ -371,6 +372,24 @@
     return tabState.tabs.find((tab) => tab.id === tabState.activeTabId) || null;
   }
 
+  async function refreshActiveContainer() {
+    if (!native || !activeTab()) {
+      activeContainer = null;
+      $('#sitePermissionsPopover').hidden = true;
+      return;
+    }
+    activeContainer = await window.silentP.getActiveContainer();
+    if (!activeContainer) return;
+    $('#sitePermissionContainer').textContent = `Container: ${activeContainer.name}`;
+    $('#sitePermissionPreset').textContent = `Preset: ${capitalize(activeContainer.privacyPreset)}`;
+    $('#sitePermissionControls').innerHTML = ['microphone','camera','location','notifications','clipboard','uploads','downloads','popups']
+      .map((permission) => `
+        <label><span>${capitalize(permission)}</span>
+          <input type="checkbox" data-site-permission="${permission}" ${activeContainer.permissions?.[permission] ? 'checked' : ''}>
+        </label>
+      `).join('');
+  }
+
   function renderNativeTabs() {
     if (!native) return;
     $('#nativeTabStrip').hidden = false;
@@ -400,6 +419,7 @@
       $('#activePrivacyPreset').value = active.privacyPreset || 'hardened';
       $('#keepActiveButton').textContent = `Keep Active: ${active.keepActive ? 'On' : 'Off'}`;
       $('#keepActiveButton').classList.toggle('active-toggle', active.keepActive);
+      refreshActiveContainer();
     } else {
       document.body.classList.remove('native-browsing');
       $('#browserBar').hidden = true;
@@ -455,8 +475,27 @@
       if (tab) await window.silentP.closeTab(tab.id);
     };
     $('#activePrivacyPreset').onchange = async (event) => {
-      const tab = activeTab();
-      if (tab) await window.silentP.setPrivacyPreset(tab.id, event.target.value);
+      if (activeContainer && event.target.value !== 'custom') {
+        activeContainer = await window.silentP.applyContainerPreset(activeContainer.id, event.target.value);
+        await refreshActiveContainer();
+      }
+    };
+    $('#sitePermissionsButton').onclick = async () => {
+      await refreshActiveContainer();
+      const popover = $('#sitePermissionsPopover');
+      popover.hidden = !popover.hidden;
+      $('#sitePermissionsButton').setAttribute('aria-expanded', String(!popover.hidden));
+    };
+    $('#sitePermissionControls').onchange = async (event) => {
+      const input = event.target.closest('[data-site-permission]');
+      if (!input || !activeContainer) return;
+      activeContainer = await window.silentP.setContainerPermission(
+        activeContainer.id,
+        input.dataset.sitePermission,
+        input.checked
+      );
+      $('#activePrivacyPreset').value = 'custom';
+      await refreshActiveContainer();
     };
 
     window.silentP.onTabsChanged((nextState) => {

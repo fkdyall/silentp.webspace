@@ -626,6 +626,12 @@ function publicContainer(container) {
   return clone(container);
 }
 
+function broadcastTabStateForContainer(containerId) {
+  for (const state of windows.values()) {
+    if ([...state.tabs.values()].some((tab) => tab.containerId === containerId)) sendTabState(state);
+  }
+}
+
 ipcMain.handle('containers:list', () => [...containers.values()].map(publicContainer));
 
 ipcMain.handle('containers:create', (_event, input = {}) => {
@@ -679,6 +685,32 @@ ipcMain.handle('containers:route-url', (_event, input) => {
     };
   }
   return { action: 'unmatched', url };
+});
+
+ipcMain.handle('containers:get-active', (event) => {
+  const state = findWindowByWebContents(event.sender);
+  const container = containerForTab(state && activeTab(state));
+  return container ? publicContainer(container) : null;
+});
+
+ipcMain.handle('containers:set-permission', (_event, containerId, permission, allowed) => {
+  const current = containers.get(containerId);
+  if (!current) return null;
+  const updated = setContainerPermission(current, permission, allowed);
+  containers.set(updated.id, updated);
+  broadcastTabStateForContainer(updated.id);
+  saveDesktopStateSoon();
+  return publicContainer(updated);
+});
+
+ipcMain.handle('containers:apply-preset', (_event, containerId, preset) => {
+  const current = containers.get(containerId);
+  if (!current || !['hardened', 'balanced', 'compatibility'].includes(preset)) return null;
+  const updated = applyPreset(current, preset);
+  containers.set(updated.id, updated);
+  broadcastTabStateForContainer(updated.id);
+  saveDesktopStateSoon();
+  return publicContainer(updated);
 });
 
 ipcMain.handle('tabs:list', (event) => {
@@ -736,7 +768,7 @@ ipcMain.handle('tabs:set-preset', (event, tabId, preset) => {
   if (!tab || !['hardened', 'balanced', 'compatibility', 'custom'].includes(preset)) return false;
   const container = containerForTab(tab);
   if (!container) return false;
-  containers.set(container.id, applyPreset(container, preset));
+  containers.set(container.id, preset === 'custom' ? container : applyPreset(container, preset));
   sendTabState(state);
   saveDesktopStateSoon();
   return true;

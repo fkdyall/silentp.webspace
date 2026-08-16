@@ -10,6 +10,11 @@ contextBridge.exposeInMainWorld('silentP', {
   updateContainer: (containerId, changes) => ipcRenderer.invoke('containers:update', containerId, changes),
   removeContainer: (containerId) => ipcRenderer.invoke('containers:remove', containerId),
   routeUrl: (url) => ipcRenderer.invoke('containers:route-url', url),
+  getActiveContainer: () => ipcRenderer.invoke('containers:get-active'),
+  setContainerPermission: (containerId, permission, allowed) =>
+    ipcRenderer.invoke('containers:set-permission', containerId, permission, allowed),
+  applyContainerPreset: (containerId, preset) =>
+    ipcRenderer.invoke('containers:apply-preset', containerId, preset),
 
   listTabs: () => ipcRenderer.invoke('tabs:list'),
   openTab: (profile) => ipcRenderer.invoke('tabs:open', profile),

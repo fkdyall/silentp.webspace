@@ -58,6 +58,12 @@
         <span class="lock-mark">◇</span>
         <input id="browserAddress" autocomplete="off" inputmode="url" spellcheck="false" aria-label="Current website address">
       </form>
+      <button class="icon-button" id="sitePermissionsButton" title="Site and container permissions" aria-expanded="false">◆</button>
+      <section class="permission-popover" id="sitePermissionsPopover" hidden>
+        <strong id="sitePermissionContainer">Container</strong>
+        <small id="sitePermissionPreset">Preset: Hardened</small>
+        <div id="sitePermissionControls"></div>
+      </section>
       <select id="activePrivacyPreset" class="preset-select" title="Privacy level for this tab">
         <option value="hardened">Hardened</option>
         <option value="balanced">Balanced</option>
