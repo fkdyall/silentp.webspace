@@ -4,7 +4,7 @@
   "desktopName": "silent-p-pwsa.desktop",
   "version": "0.3.0-alpha.1",
   "description": "Desktop application for Silent P. Progressive Webspace App",
-  "main": "main.js",
+  "main": "bootstrap.js",
   "author": {
     "name": "Silent P.",
     "email": "252804653+fkdyall@users.noreply.github.com"
@@ -18,7 +18,8 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "check": "node --check main.js && node --check preload.js && node --check security.js && node --check ../web/app.js && node check-architecture.js",
+    "test:clipboard": "node test-clipboard-permissions.js",
+    "check": "node test-clipboard-permissions.js && node --check bootstrap.js && node --check clipboard-permissions.js && node --check main.js && node --check preload.js && node --check security.js && node --check ../web/app.js && node check-architecture.js",
     "dist:linux": "electron-builder --linux AppImage --publish never",
     "dist:win": "electron-builder --win portable --publish never",
     "dist:linux:all": "electron-builder --linux AppImage deb --publish never",
@@ -38,6 +39,8 @@
       "buildResources": "assets"
     },
     "files": [
+      "bootstrap.js",
+      "clipboard-permissions.js",
       "main.js",
       "preload.js",
       "security.js",
