@@ -8,6 +8,7 @@ const main = read('main.js');
 const preload = read('preload.js');
 const app = read('../web/app.js');
 const html = read('../web/index.html');
+const packageConfig = JSON.parse(read('package.json'));
 
 const requirements = [
   [main.includes('partitionForContainer'), 'tabs must resolve sessions through their container identity'],
@@ -27,6 +28,11 @@ const requirements = [
   [html.includes('newTabView'), 'browser must expose an immediate new-tab surface'],
   [html.includes('permissionsPopover'), 'browser chrome must expose live site permissions'],
   [html.includes('Exit &amp; Free Resources'), 'public resource-release label must remain generic'],
+  [packageConfig.name === 'silent-p-pwsa-desktop', 'migration build must retain the legacy npm package identity'],
+  [packageConfig.build.appId === 'com.fypm.silentpwebspace', 'migration build must retain the legacy application ID'],
+  [packageConfig.productName === 'FYPM Browser', 'visible product name must be FYPM Browser'],
+  [packageConfig.build.executableName === 'fypm-browser', 'Linux executable must be fypm-browser'],
+  [packageConfig.build.appImage.artifactName === 'FYPM-Browser-${version}-linux-${arch}.${ext}', 'AppImage artifact naming must use FYPM Browser'],
   [!main.includes('AUTO_RELEASE_ON_MINIMIZE'), 'minimizing must not automatically kill an AI companion tab']
 ];
 

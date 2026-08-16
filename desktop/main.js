@@ -249,7 +249,7 @@ function createBrowserWindow(restored = null) {
     minWidth: 900,
     minHeight: 640,
     backgroundColor: '#080b10',
-    title: 'Silent P. PWSA',
+    title: 'FYPM Browser',
     autoHideMenuBar: true,
     show: false,
     webPreferences: {
