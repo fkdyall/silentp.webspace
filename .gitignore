@@ -3,3 +3,4 @@ desktop/dist/
 .vercel/
 *.log
 .DS_Store
+.worktrees/
