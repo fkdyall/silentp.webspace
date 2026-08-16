@@ -1,5 +1,6 @@
 'use strict';
 
+// Regression test for Electron's hyphenated clipboard permission names.
 const assert = require('node:assert/strict');
 
 let clipboardPermissions;
