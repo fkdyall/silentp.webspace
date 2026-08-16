@@ -1,19 +1,11 @@
 {
-  "name": "Silent P. Progressive Webspace App",
-  "short_name": "Silent P. PWSA",
-  "description": "Create and manage personal web application profiles.",
+  "name": "FYPM Browser",
+  "short_name": "FYPM Browser",
+  "description": "A normal browser with persistent isolated identities.",
   "id": "silent-p-pwsa",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#080b10",
-  "theme_color": "#0a0d12",
-  "icons": [
-    {
-      "src": "./icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
-  ]
+  "theme_color": "#090b12"
 }

@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld('silentP', {
   newWindow: () => ipcRenderer.invoke('window:new'),
 
   showDashboard: () => ipcRenderer.invoke('browser:dashboard'),
+  setChromeHeight: (height) => ipcRenderer.invoke('browser:set-chrome-height', height),
   navigate: (url) => ipcRenderer.invoke('browser:navigate', url),
   command: (command) => ipcRenderer.send('browser:command', command),
   toggleDesktop: () => ipcRenderer.invoke('browser:toggle-desktop'),

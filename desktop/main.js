@@ -268,6 +268,7 @@ function createBrowserWindow(restored = null) {
     browserWindow,
     tabs: new Map(),
     activeTabId: null,
+    chromeHeight: TAB_STRIP_HEIGHT + BROWSER_BAR_HEIGHT,
     bounds
   };
   windows.set(windowId, state);
@@ -509,7 +510,7 @@ function layoutActiveView(state) {
   const tab = state.tabs.get(state.activeTabId);
   if (!tab?.view || state.browserWindow.isDestroyed()) return;
   const [width, height] = state.browserWindow.getContentSize();
-  const top = TAB_STRIP_HEIGHT + BROWSER_BAR_HEIGHT;
+  const top = state.chromeHeight || TAB_STRIP_HEIGHT + BROWSER_BAR_HEIGHT;
   tab.view.setBounds({ x: 0, y: top, width, height: Math.max(100, height - top) });
 }
 
@@ -836,6 +837,14 @@ ipcMain.handle('browser:dashboard', (event) => {
   const state = findWindowByWebContents(event.sender);
   if (!state) return false;
   showDashboard(state);
+  return true;
+});
+
+ipcMain.handle('browser:set-chrome-height', (event, requestedHeight) => {
+  const state = findWindowByWebContents(event.sender);
+  if (!state) return false;
+  state.chromeHeight = Math.max(108, Math.min(500, Number(requestedHeight) || 108));
+  layoutActiveView(state);
   return true;
 });
 

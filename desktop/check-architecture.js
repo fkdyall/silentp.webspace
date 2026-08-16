@@ -21,8 +21,11 @@ const requirements = [
   [main.includes("ipcMain.handle('app:quit-and-release'"), 'full resource-release exit must exist'],
   [preload.includes('setKeepActive'), 'preload bridge must expose Keep Active'],
   [preload.includes('detachTab'), 'preload bridge must expose multi-window detach'],
-  [app.includes('nativeTabList'), 'web interface must render the native tab strip'],
-  [app.includes('activePrivacyPreset'), 'web interface must expose per-tab privacy presets'],
+  [app.includes('tabList'), 'web interface must render the native tab strip'],
+  [app.includes('routeUrl'), 'address bar must route through saved containers'],
+  [html.includes('containerChooser'), 'multiple container matches must render a chooser'],
+  [html.includes('newTabView'), 'browser must expose an immediate new-tab surface'],
+  [html.includes('permissionsPopover'), 'browser chrome must expose live site permissions'],
   [html.includes('Exit &amp; Free Resources'), 'public resource-release label must remain generic'],
   [!main.includes('AUTO_RELEASE_ON_MINIMIZE'), 'minimizing must not automatically kill an AI companion tab']
 ];
