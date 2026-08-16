@@ -1,6 +1,5 @@
 'use strict';
 
-const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const {
@@ -12,6 +11,14 @@ const {
   shell
 } = require('electron');
 const { stripTracking, shouldBlock } = require('./security');
+const {
+  normalizeContainer,
+  partitionForContainer,
+  matchingContainers,
+  applyPreset,
+  setContainerPermission
+} = require('./container-model');
+const { loadBrowserState, saveBrowserState } = require('./state-store');
 
 const APP_ID = 'com.fypm.silentpwebspace';
 const VERSION = '0.3';
@@ -21,8 +28,9 @@ const TAB_STRIP_HEIGHT = 44;
 const BROWSER_BAR_HEIGHT = 64;
 
 const windows = new Map();
+const containers = new Map();
 const configuredPartitions = new Set();
-const partitionTabIds = new Map();
+const partitionContainerIds = new Map();
 let shuttingDown = false;
 let saveTimer = null;
 
@@ -40,16 +48,16 @@ function uiPath() {
     : path.join(__dirname, '..', 'web', 'index.html');
 }
 
-function statePath() {
+function browserStatePath() {
+  return path.join(app.getPath('userData'), 'browser-state-v2.json');
+}
+
+function legacyStatePath() {
   return path.join(app.getPath('userData'), 'desktop-session.json');
 }
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
-}
-
-function safeId(value) {
-  return String(value || '').replace(/[^a-z0-9_-]/gi, '').slice(0, 64);
 }
 
 function validatedWebUrl(input) {
@@ -61,11 +69,6 @@ function validatedWebUrl(input) {
   }
 }
 
-function partitionFor(tab) {
-  const key = safeId(tab.id);
-  return tab.temporary ? `silentp-temp-${key}` : `persist:silentp-tab-${key}`;
-}
-
 function findWindowByWebContents(webContents) {
   const browserWindow = BrowserWindow.fromWebContents(webContents);
   if (!browserWindow) return null;
@@ -75,65 +78,21 @@ function findWindowByWebContents(webContents) {
   return null;
 }
 
-function tabForPartition(partition) {
-  const tabId = partitionTabIds.get(partition);
-  if (!tabId) return null;
-  for (const state of windows.values()) {
-    if (state.tabs.has(tabId)) return state.tabs.get(tabId);
-  }
-  return null;
+function containerForTab(tab) {
+  return tab ? containers.get(tab.containerId) || null : null;
 }
 
-function normalizePrivacy(profile) {
-  profile.privacy ||= {};
-  profile.permissions ||= {};
-  profile.privacyPreset ||= 'hardened';
-  return profile;
+function containerForPartition(partition) {
+  return containers.get(partitionContainerIds.get(partition)) || null;
 }
 
-function applyPreset(profile, preset) {
-  normalizePrivacy(profile);
-  profile.privacyPreset = preset;
-  if (preset === 'hardened') {
-    Object.assign(profile.privacy, {
-      clearUrls: true,
-      blocking: true,
-      gpc: true,
-      webrtc: true,
-      thirdPartyCookies: false
-    });
-    Object.assign(profile.permissions, {
-      popups: false,
-      notifications: false,
-      camera: false,
-      microphone: false,
-      location: false,
-      clipboard: false
-    });
-  } else if (preset === 'balanced') {
-    Object.assign(profile.privacy, {
-      clearUrls: true,
-      blocking: true,
-      gpc: true,
-      webrtc: true,
-      thirdPartyCookies: false
-    });
-    profile.permissions.popups = true;
-  } else if (preset === 'compatibility') {
-    Object.assign(profile.privacy, {
-      clearUrls: true,
-      blocking: false,
-      gpc: true,
-      webrtc: false,
-      thirdPartyCookies: true
-    });
-    profile.permissions.popups = true;
-  }
-  return profile;
+function partitionForTab(tab) {
+  const container = containerForTab(tab);
+  return container ? partitionForContainer(container) : null;
 }
 
-function permissionAllowed(tab, permission, details = {}) {
-  const permissions = tab?.profile?.permissions || {};
+function permissionAllowed(container, permission, details = {}) {
+  const permissions = container?.permissions || {};
   if (permission === 'media') {
     const requested = details.mediaTypes || [];
     if (!requested.length) return Boolean(permissions.camera || permissions.microphone);
@@ -161,22 +120,22 @@ function configureSession(profileSession, partition) {
   configuredPartitions.add(partition);
 
   profileSession.setPermissionRequestHandler((_contents, permission, callback, details) => {
-    callback(permissionAllowed(tabForPartition(partition), permission, details));
+    callback(permissionAllowed(containerForPartition(partition), permission, details));
   });
 
   profileSession.setPermissionCheckHandler((_contents, permission, _origin, details) => {
-    return permissionAllowed(tabForPartition(partition), permission, details);
+    return permissionAllowed(containerForPartition(partition), permission, details);
   });
 
   profileSession.webRequest.onBeforeRequest(
     { urls: ['http://*/*', 'https://*/*'] },
     (details, callback) => {
-      const tab = tabForPartition(partition);
-      if (!tab) return callback({});
-      if (tab.profile.privacy?.blocking && shouldBlock(details.url)) {
+      const container = containerForPartition(partition);
+      if (!container) return callback({});
+      if (container.privacy?.blocking && shouldBlock(details.url)) {
         return callback({ cancel: true });
       }
-      const cleaned = tab.profile.privacy?.clearUrls && details.resourceType === 'mainFrame'
+      const cleaned = container.privacy?.clearUrls && details.resourceType === 'mainFrame'
         ? stripTracking(details.url)
         : details.url;
       callback(cleaned !== details.url ? { redirectURL: cleaned } : {});
@@ -186,13 +145,13 @@ function configureSession(profileSession, partition) {
   profileSession.webRequest.onBeforeSendHeaders(
     { urls: ['http://*/*', 'https://*/*'] },
     (details, callback) => {
-      const tab = tabForPartition(partition);
+      const container = containerForPartition(partition);
       const requestHeaders = { ...details.requestHeaders };
-      if (tab?.profile?.privacy?.gpc) {
+      if (container?.privacy?.gpc) {
         requestHeaders['Sec-GPC'] = '1';
         requestHeaders.DNT = '1';
       }
-      const language = tab?.profile?.language || 'en-US';
+      const language = container?.language || 'en-US';
       requestHeaders['Accept-Language'] = `${language},en;q=0.8`;
       callback({ requestHeaders });
     }
@@ -204,7 +163,7 @@ function configureSession(profileSession, partition) {
 function serializedTab(tab) {
   return {
     id: tab.id,
-    profile: clone(tab.profile),
+    containerId: tab.containerId,
     title: tab.title,
     url: tab.url,
     keepActive: Boolean(tab.keepActive),
@@ -215,14 +174,17 @@ function serializedTab(tab) {
 }
 
 function publicTab(tab) {
+  const container = containerForTab(tab);
   return {
     id: tab.id,
-    title: tab.title || tab.profile.name || tab.profile.domain || 'New tab',
+    containerId: tab.containerId,
+    title: tab.title || container?.name || 'New tab',
     url: tab.url,
-    color: tab.profile.color || '#68e1c5',
+    color: container?.color || '#68e1c5',
+    containerName: container?.name || 'Unknown container',
     keepActive: Boolean(tab.keepActive),
     parked: Boolean(tab.parked || !tab.view),
-    privacyPreset: tab.profile.privacyPreset || 'hardened',
+    privacyPreset: container?.privacyPreset || 'hardened',
     temporary: Boolean(tab.temporary)
   };
 }
@@ -235,7 +197,8 @@ function saveDesktopStateSoon() {
 function saveDesktopState() {
   if (shuttingDown || windows.size === 0) return;
   const payload = {
-    version: 1,
+    version: 2,
+    containers: [...containers.values()].filter((container) => !container.temporary).map(clone),
     windows: [...windows.values()].map((state) => ({
       id: state.id,
       bounds: state.browserWindow && !state.browserWindow.isDestroyed()
@@ -248,19 +211,9 @@ function saveDesktopState() {
     }))
   };
   try {
-    fs.mkdirSync(path.dirname(statePath()), { recursive: true });
-    fs.writeFileSync(statePath(), JSON.stringify(payload, null, 2), 'utf8');
+    saveBrowserState(browserStatePath(), payload);
   } catch (error) {
     console.error('Unable to save desktop session:', error);
-  }
-}
-
-function loadDesktopState() {
-  try {
-    const parsed = JSON.parse(fs.readFileSync(statePath(), 'utf8'));
-    return Array.isArray(parsed.windows) ? parsed.windows : [];
-  } catch {
-    return [];
   }
 }
 
@@ -296,13 +249,14 @@ function createBrowserWindow(restored = null) {
   windows.set(windowId, state);
 
   for (const saved of restored?.tabs || []) {
-    const profile = normalizePrivacy(clone(saved.profile || {}));
+    const container = containers.get(saved.containerId);
+    if (!container) continue;
     state.tabs.set(saved.id, {
       id: saved.id,
       windowId,
-      profile,
-      title: saved.title || profile.name || 'Restored tab',
-      url: saved.url || profile.url,
+      containerId: container.id,
+      title: saved.title || container.name || 'Restored tab',
+      url: saved.url || container.primaryUrl,
       keepActive: Boolean(saved.keepActive),
       parked: true,
       temporary: false,
@@ -354,19 +308,22 @@ function updateTabFromContents(state, tab, changes) {
 }
 
 function popupAllowed(tab) {
+  const container = containerForTab(tab);
   return Boolean(
-    tab.profile.permissions?.popups ||
-    tab.profile.privacyPreset === 'balanced' ||
-    tab.profile.privacyPreset === 'compatibility'
+    container?.permissions?.popups ||
+    container?.privacyPreset === 'balanced' ||
+    container?.privacyPreset === 'compatibility'
   );
 }
 
 function createTabView(state, tab) {
   if (tab.view && !tab.view.webContents.isDestroyed()) return tab.view;
 
-  const partition = partitionFor(tab);
-  partitionTabIds.set(partition, tab.id);
-  const profileSession = session.fromPartition(partition, { cache: !tab.temporary });
+  const container = containerForTab(tab);
+  if (!container) throw new Error(`Container not found for tab ${tab.id}`);
+  const partition = partitionForContainer(container);
+  partitionContainerIds.set(partition, container.id);
+  const profileSession = session.fromPartition(partition, { cache: !container.temporary });
   configureSession(profileSession, partition);
 
   const view = new WebContentsView({
@@ -385,7 +342,7 @@ function createTabView(state, tab) {
   tab.parked = false;
 
   const contents = view.webContents;
-  const desktop = tab.profile.renderMode === 'desktop' || tab.profile.uaPreset === 'desktop';
+  const desktop = container.renderMode === 'desktop' || container.uaPreset === 'desktop';
   contents.setUserAgent(desktop ? DESKTOP_UA : MOBILE_UA);
   contents.setBackgroundThrottling(!tab.keepActive);
 
@@ -396,7 +353,7 @@ function createTabView(state, tab) {
       return { action: 'deny' };
     }
 
-    if (tab.profile.externalLinkBehavior === 'external') {
+    if (container.externalLinkBehavior === 'external') {
       shell.openExternal(target).catch(() => {});
       return { action: 'deny' };
     }
@@ -475,11 +432,12 @@ function createTabView(state, tab) {
 }
 
 async function loadTab(tab) {
-  const target = validatedWebUrl(tab.url || tab.profile.url);
+  const container = containerForTab(tab);
+  const target = validatedWebUrl(tab.url || container?.primaryUrl);
   if (!target) throw new Error('Only HTTP and HTTPS website addresses are supported.');
   const view = tab.view;
   if (!view || view.webContents.isDestroyed()) throw new Error('Tab renderer is unavailable.');
-  const cleaned = tab.profile.privacy?.clearUrls ? stripTracking(target) : target;
+  const cleaned = container?.privacy?.clearUrls ? stripTracking(target) : target;
   await view.webContents.loadURL(cleaned);
 }
 
@@ -514,7 +472,7 @@ async function activateTab(state, tabId) {
   const current = state.tabs.get(state.activeTabId);
   if (current && current.id !== next.id) {
     detachViewFromWindow(state, current);
-    if (current.profile.parkWhenInactive && !current.keepActive) {
+    if (containerForTab(current)?.parkWhenInactive && !current.keepActive) {
       destroyTabView(current);
     } else if (current.view && !current.view.webContents.isDestroyed()) {
       current.view.webContents.setBackgroundThrottling(!current.keepActive);
@@ -535,17 +493,26 @@ async function activateTab(state, tabId) {
   return true;
 }
 
-async function createTab(state, profileInput) {
-  const profile = applyPreset(normalizePrivacy(clone(profileInput)), profileInput.privacyPreset || 'hardened');
+async function createTab(state, request = {}) {
+  let container = request.containerId ? containers.get(request.containerId) : null;
+  if (!container) {
+    container = normalizeContainer({
+      ...request,
+      id: request.id || id(request.temporary ? 'temp' : 'container'),
+      primaryUrl: request.primaryUrl || request.url || '',
+      temporary: Boolean(request.temporary)
+    });
+    containers.set(container.id, container);
+  }
   const tab = {
     id: id('tab'),
     windowId: state.id,
-    profile,
-    title: profile.name || profile.domain || 'New tab',
-    url: profile.url,
+    containerId: container.id,
+    title: container.name || 'New tab',
+    url: request.url || container.primaryUrl,
     keepActive: false,
     parked: false,
-    temporary: Boolean(profile.temporary),
+    temporary: Boolean(container.temporary),
     createdAt: Date.now(),
     view: null
   };
@@ -576,11 +543,20 @@ async function closeTab(state, tabId) {
   state.tabs.delete(tabId);
 
   if (tab.temporary) {
-    const partition = partitionFor(tab);
-    const tempSession = session.fromPartition(partition);
-    await Promise.allSettled([tempSession.clearStorageData(), tempSession.clearCache()]);
-    configuredPartitions.delete(partition);
-    partitionTabIds.delete(partition);
+    const stillOpen = [...windows.values()].some((windowState) =>
+      [...windowState.tabs.values()].some((candidate) => candidate.containerId === tab.containerId)
+    );
+    if (!stillOpen) {
+      const container = containers.get(tab.containerId);
+      const partition = container && partitionForContainer(container);
+      if (partition) {
+        const tempSession = session.fromPartition(partition);
+        await Promise.allSettled([tempSession.clearStorageData(), tempSession.clearCache()]);
+        configuredPartitions.delete(partition);
+        partitionContainerIds.delete(partition);
+      }
+      containers.delete(tab.containerId);
+    }
   }
 
   if (state.activeTabId === tabId) {
@@ -599,7 +575,7 @@ function showDashboard(state) {
   const active = state.tabs.get(state.activeTabId);
   if (active) {
     detachViewFromWindow(state, active);
-    if (active.profile.parkWhenInactive && !active.keepActive) destroyTabView(active);
+    if (containerForTab(active)?.parkWhenInactive && !active.keepActive) destroyTabView(active);
     else if (active.view && !active.view.webContents.isDestroyed()) {
       active.view.webContents.setBackgroundThrottling(!active.keepActive);
     }
@@ -646,6 +622,65 @@ function activeContents(state) {
   return activeTab(state)?.view?.webContents || null;
 }
 
+function publicContainer(container) {
+  return clone(container);
+}
+
+ipcMain.handle('containers:list', () => [...containers.values()].map(publicContainer));
+
+ipcMain.handle('containers:create', (_event, input = {}) => {
+  const container = normalizeContainer({
+    ...input,
+    id: input.id || id(input.temporary ? 'temp' : 'container'),
+    primaryUrl: input.primaryUrl || input.url || '',
+    temporary: Boolean(input.temporary)
+  });
+  containers.set(container.id, container);
+  saveDesktopStateSoon();
+  return publicContainer(container);
+});
+
+ipcMain.handle('containers:update', (_event, containerId, changes = {}) => {
+  const current = containers.get(containerId);
+  if (!current) return null;
+  const updated = normalizeContainer({
+    ...current,
+    ...changes,
+    id: current.id,
+    partitionKey: current.partitionKey,
+    temporary: current.temporary,
+    updatedAt: Date.now()
+  });
+  containers.set(updated.id, updated);
+  saveDesktopStateSoon();
+  return publicContainer(updated);
+});
+
+ipcMain.handle('containers:remove', (_event, containerId) => {
+  const inUse = [...windows.values()].some((state) =>
+    [...state.tabs.values()].some((tab) => tab.containerId === containerId)
+  );
+  if (inUse) return false;
+  const removed = containers.delete(containerId);
+  if (removed) saveDesktopStateSoon();
+  return removed;
+});
+
+ipcMain.handle('containers:route-url', (_event, input) => {
+  const url = validatedWebUrl(input);
+  if (!url) return { action: 'invalid', url: String(input || '') };
+  const matches = matchingContainers([...containers.values()], url);
+  if (matches.length === 1) return { action: 'open', containerId: matches[0].id, url };
+  if (matches.length > 1) {
+    return {
+      action: 'choose',
+      url,
+      matches: matches.map(({ id: matchId, name, primaryUrl }) => ({ id: matchId, name, primaryUrl }))
+    };
+  }
+  return { action: 'unmatched', url };
+});
+
 ipcMain.handle('tabs:list', (event) => {
   const state = findWindowByWebContents(event.sender);
   if (!state) return { tabs: [], activeTabId: null };
@@ -656,10 +691,10 @@ ipcMain.handle('tabs:list', (event) => {
   };
 });
 
-ipcMain.handle('tabs:open', async (event, profile) => {
+ipcMain.handle('tabs:open', async (event, request) => {
   const state = findWindowByWebContents(event.sender);
   if (!state) throw new Error('Browser window not found.');
-  return createTab(state, profile);
+  return createTab(state, request);
 });
 
 ipcMain.handle('tabs:activate', async (event, tabId) => {
@@ -699,7 +734,9 @@ ipcMain.handle('tabs:set-preset', (event, tabId, preset) => {
   const state = findWindowByWebContents(event.sender);
   const tab = state?.tabs.get(tabId);
   if (!tab || !['hardened', 'balanced', 'compatibility', 'custom'].includes(preset)) return false;
-  applyPreset(tab.profile, preset);
+  const container = containerForTab(tab);
+  if (!container) return false;
+  containers.set(container.id, applyPreset(container, preset));
   sendTabState(state);
   saveDesktopStateSoon();
   return true;
@@ -728,7 +765,8 @@ ipcMain.handle('browser:navigate', async (event, input) => {
   const contents = state && activeContents(state);
   const url = validatedWebUrl(input);
   if (!tab || !contents || !url) return false;
-  await contents.loadURL(tab.profile.privacy?.clearUrls ? stripTracking(url) : url);
+  const container = containerForTab(tab);
+  await contents.loadURL(container?.privacy?.clearUrls ? stripTracking(url) : url);
   return true;
 });
 
@@ -737,9 +775,12 @@ ipcMain.handle('browser:toggle-desktop', (event) => {
   const tab = state && activeTab(state);
   const contents = state && activeContents(state);
   if (!tab || !contents) return false;
-  const desktop = !(tab.profile.renderMode === 'desktop' || tab.profile.uaPreset === 'desktop');
-  tab.profile.renderMode = desktop ? 'desktop' : 'mobile';
-  tab.profile.uaPreset = desktop ? 'desktop' : 'mobile';
+  const container = containerForTab(tab);
+  if (!container) return false;
+  const desktop = !(container.renderMode === 'desktop' || container.uaPreset === 'desktop');
+  container.renderMode = desktop ? 'desktop' : 'mobile';
+  container.uaPreset = desktop ? 'desktop' : 'mobile';
+  container.updatedAt = Date.now();
   contents.setUserAgent(desktop ? DESKTOP_UA : MOBILE_UA);
   contents.reload();
   sendTabState(state);
@@ -772,8 +813,12 @@ ipcMain.handle('app:metrics', () => app.getAppMetrics().map((metric) => ({
 })));
 
 app.whenReady().then(() => {
-  const restored = loadDesktopState();
-  if (restored.length) restored.forEach((windowState) => createBrowserWindow(windowState));
+  const restored = loadBrowserState({
+    browserStatePath: browserStatePath(),
+    legacyStatePath: legacyStatePath()
+  });
+  restored.containers.forEach((container) => containers.set(container.id, container));
+  if (restored.windows.length) restored.windows.forEach((windowState) => createBrowserWindow(windowState));
   else createBrowserWindow();
 
   app.on('activate', () => {

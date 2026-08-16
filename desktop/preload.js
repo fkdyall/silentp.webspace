@@ -5,6 +5,12 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('silentP', {
   isNative: true,
 
+  listContainers: () => ipcRenderer.invoke('containers:list'),
+  createContainer: (input) => ipcRenderer.invoke('containers:create', input),
+  updateContainer: (containerId, changes) => ipcRenderer.invoke('containers:update', containerId, changes),
+  removeContainer: (containerId) => ipcRenderer.invoke('containers:remove', containerId),
+  routeUrl: (url) => ipcRenderer.invoke('containers:route-url', url),
+
   listTabs: () => ipcRenderer.invoke('tabs:list'),
   openTab: (profile) => ipcRenderer.invoke('tabs:open', profile),
   activateTab: (tabId) => ipcRenderer.invoke('tabs:activate', tabId),

@@ -10,7 +10,9 @@ const app = read('../web/app.js');
 const html = read('../web/index.html');
 
 const requirements = [
-  [main.includes('persist:silentp-tab-'), 'each persistent tab must have its own session partition'],
+  [main.includes('partitionForContainer'), 'tabs must resolve sessions through their container identity'],
+  [main.includes("ipcMain.handle('containers:route-url'"), 'main process must route URLs through saved containers'],
+  [main.includes("ipcMain.handle('containers:update'"), 'main process must own container updates'],
   [main.includes("ipcMain.handle('tabs:keep-active'"), 'Keep Active IPC handler must exist'],
   [main.includes("ipcMain.handle('tabs:detach'"), 'tab-to-window detach handler must exist'],
   [main.includes('overrideBrowserWindowOptions'), 'authentication popups must explicitly inherit parent-tab session options'],

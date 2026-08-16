@@ -74,6 +74,12 @@ function normalizeContainer(input = {}) {
     permissions: { ...DEFAULT_PERMISSIONS, ...(input.permissions || {}) },
     temporary: Boolean(input.temporary),
     keepActive: Boolean(input.keepActive),
+    color: String(input.color || '#68e1c5'),
+    renderMode: String(input.renderMode || 'desktop'),
+    uaPreset: String(input.uaPreset || 'desktop'),
+    language: String(input.language || 'en-US'),
+    externalLinkBehavior: String(input.externalLinkBehavior || 'internal'),
+    parkWhenInactive: Boolean(input.parkWhenInactive),
     createdAt: Number(input.createdAt) || now,
     updatedAt: Number(input.updatedAt) || now
   };
