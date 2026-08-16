@@ -1,0 +1,1 @@
+This directory contains approved design specifications for FYPM Browser / Silent P development work.
