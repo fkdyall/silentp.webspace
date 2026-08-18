@@ -6,7 +6,9 @@
   const $ = (selector) => document.querySelector(selector);
   let tabState = { tabs: [], activeTabId: null };
   let containers = [];
+  let profiles = [];
   let activeContainer = null;
+  let activePrivacy = null;
   let pendingRoute = null;
   let toastTimer = null;
 
@@ -58,6 +60,7 @@
 
   async function refreshContainers() {
     containers = native ? await native.listContainers() : [];
+    profiles = native ? await native.listProfiles() : [];
     renderShortcuts();
   }
 
@@ -70,17 +73,25 @@
       return;
     }
     if (!Array.isArray(legacy?.profiles)) return;
-    const knownIds = new Set((await native.listContainers()).map((container) => container.id));
+    const knownIds = new Set((await native.listProfiles()).map((profile) => profile.id));
     for (const profile of legacy.profiles) {
       if (!profile?.id || knownIds.has(profile.id) || profile.temporary) continue;
-      await native.createContainer({
+      const created = await native.createProfile({
         id: profile.id,
         name: profile.name,
+        color: profile.color,
+        createdAt: profile.createdAt,
+        updatedAt: profile.updatedAt
+      });
+      const legacyHost = (() => { try { return new URL(profile.url).hostname; } catch { return ''; } })();
+      const legacyGoogle = ['accounts.google.com', 'mail.google.com', 'drive.google.com', 'docs.google.com', 'gmail.com'].includes(legacyHost);
+      if (created && legacyGoogle) await native.authorizeFamily(created.id, 'google');
+      if (created && profile.url && !legacyGoogle) await native.createCompartment(created.id, {
+        id: `${profile.id}-primary`,
+        name: profile.name,
         primaryUrl: profile.url,
-        privacyPreset: profile.privacyPreset,
         privacy: profile.privacy,
         permissions: profile.permissions,
-        color: profile.color,
         renderMode: profile.renderMode,
         uaPreset: profile.uaPreset,
         language: profile.language,
@@ -94,13 +105,12 @@
   }
 
   function renderShortcuts() {
-    const saved = containers.filter((container) => !container.temporary);
-    $('#containerShortcuts').innerHTML = saved.length ? saved.map((container) => `
-      <button class="shortcut" data-open-container="${escapeHtml(container.id)}">
-        <span class="shortcut-icon" style="--container-color:${escapeHtml(container.color)}">${escapeHtml(container.name.slice(0, 2).toUpperCase())}</span>
-        <span><strong>${escapeHtml(container.name)}</strong><small>${escapeHtml(container.primaryUrl || 'No home address')}</small></span>
+    $('#containerShortcuts').innerHTML = profiles.length ? profiles.map((profile) => `
+      <button class="shortcut" data-open-profile="${escapeHtml(profile.id)}">
+        <span class="shortcut-icon" style="--container-color:${escapeHtml(profile.color)}">${escapeHtml(profile.name.slice(0, 2).toUpperCase())}</span>
+        <span><strong>${escapeHtml(profile.name)}</strong><small>${escapeHtml((profile.authorizedFamilies || []).map((family) => label(family.providerId)).join(', ') || 'Isolated profile')}</small></span>
       </button>
-    `).join('') : '<p class="empty-copy">Your saved containers will appear here. You can browse without setting one up first.</p>';
+    `).join('') : '<p class="empty-copy">Your persistent profiles will appear here.</p>';
   }
 
   async function renderChrome() {
@@ -124,11 +134,13 @@
     $('#keepActiveMenuItem').textContent = `Keep Active: ${selected?.keepActive ? 'On' : 'Off'}`;
     $('#parkTabMenuItem').disabled = !selected;
     if (selected) {
-      activeContainer = await native.getActiveContainer();
-      $('#containerName').textContent = activeContainer?.name || selected.containerName || 'Container';
-      $('#containerDot').style.background = activeContainer?.color || selected.color;
+      activePrivacy = await native.getActivePrivacy();
+      activeContainer = activePrivacy?.compartment || await native.getActiveContainer();
+      $('#containerName').textContent = `${activePrivacy?.profile?.name || selected.profileName || 'Profile'} · ${activeContainer?.name || selected.compartmentName || 'Site'}`;
+      $('#containerDot').style.background = activePrivacy?.profile?.color || selected.color;
     } else {
       activeContainer = null;
+      activePrivacy = null;
       $('#containerName').textContent = 'New tab';
       $('#containerDot').style.background = '#7cf0d2';
     }
@@ -167,17 +179,25 @@
     const url = addressFromInput(value);
     if (!url) return showToast('Enter a valid address or search');
     if (!native) return window.location.assign(url);
-    const route = await native.routeUrl(url);
-    if (route.action === 'open') return openWithContainer(route.containerId, route.url);
-    if (route.action === 'choose' || route.action === 'unmatched') return showRouteChooser(route);
+    const route = await native.routeProfileUrl(url);
+    if (route.action === 'open') return openWithContainer(route.compartmentId, route.url);
+    if (route.action === 'choose' || route.action === 'create') return showRouteChooser(route);
     showToast('Only HTTP and HTTPS addresses are supported');
   }
 
   function renderPermissions() {
-    if (!activeContainer) return;
-    $('#permissionsContainerName').textContent = activeContainer.name;
-    $('#permissionsPreset').textContent = `Preset: ${label(activeContainer.privacyPreset)}`;
-    $('#permissionPreset').value = activeContainer.privacyPreset;
+    if (!activePrivacy || !activeContainer) return;
+    const view = window.fypmUiModel.privacyViewModel(activePrivacy);
+    $('#permissionsContainerName').textContent = view.compartmentName;
+    $('#permissionsPreset').textContent = `${view.protectionLabel} · Compatibility ${view.compatibilityLevel}`;
+    $('#privacyProfile').textContent = view.profileName;
+    $('#privacyCompartment').textContent = view.compartmentName;
+    $('#privacyBlocked').textContent = String(view.blockedRequestCount);
+    $('#privacyProvider').textContent = view.authorizedFamily;
+    $('#permissionPreset').value = String(view.compatibilityLevel);
+    $('#temporaryAllowances').innerHTML = view.temporaryAllowances.length
+      ? view.temporaryAllowances.map((allowance) => `<div>${escapeHtml(allowance.host)}${allowance.reason ? ` · ${escapeHtml(allowance.reason)}` : ''}</div>`).join('')
+      : 'None';
     $('#permissionControls').innerHTML = PERMISSIONS.map((permission) => `
       <label><span>${label(permission)}</span><input type="checkbox" data-permission="${permission}" ${activeContainer.permissions?.[permission] ? 'checked' : ''}></label>
     `).join('');
@@ -209,6 +229,26 @@
     }
     populateContainerForm(container);
     $('#containerDialog').showModal();
+  }
+
+  async function openProfileDialog(profileId) {
+    const profile = profiles.find((candidate) => candidate.id === profileId) || profiles[0];
+    if (!profile) return showToast('Create a profile first');
+    const sites = await native.listCompartments(profile.id);
+    const allowances = await native.listCompatibilityAllowances(profile.id);
+    const manager = window.fypmUiModel.profileManagerViewModel({ profile, compartments: sites, allowances });
+    $('#profilePicker').innerHTML = profiles.map((candidate) => `<option value="${escapeHtml(candidate.id)}">${escapeHtml(candidate.name)}</option>`).join('');
+    $('#profilePicker').value = profile.id;
+    $('#profileName').value = profile.name;
+    $('#profileGoogleFamily').checked = manager.families.some((family) => family.providerId === 'google');
+    $('#profileCompartments').innerHTML = manager.compartments.length ? manager.compartments.map((site) => `
+      <div class="manager-row"><span><strong>${escapeHtml(site.name)}</strong><small>${escapeHtml(site.primaryUrl || site.key)}</small></span><button type="button" data-clear-site="${escapeHtml(site.id)}">Clear site data</button></div>
+    `).join('') : '<p class="empty-copy">No persistent site compartments.</p>';
+    $('#profileAllowances').innerHTML = manager.allowances.length ? manager.allowances.map((allowance) => `
+      <div class="manager-row"><span><strong>${escapeHtml(allowance.host)}</strong><small>${allowance.temporary ? 'Temporary' : 'Pinned'} · level ${allowance.level}</small></span>${allowance.temporary ? `<button type="button" data-pin-allowance="${escapeHtml(allowance.id)}" data-site="${escapeHtml(allowance.compartmentId)}">Pin</button>` : ''}<button type="button" data-remove-allowance="${escapeHtml(allowance.id)}" data-site="${escapeHtml(allowance.compartmentId)}">Remove</button></div>
+    `).join('') : '<p class="empty-copy">No compatibility allowances.</p>';
+    $('#profileDialog').dataset.profileId = profile.id;
+    if (!$('#profileDialog').open) $('#profileDialog').showModal();
   }
 
   async function initialize() {
@@ -251,11 +291,9 @@
     if (tab) await native.activateTab(tab.dataset.tabId);
   };
   $('#containerShortcuts').onclick = (event) => {
-    const shortcut = event.target.closest('[data-open-container]');
+    const shortcut = event.target.closest('[data-open-profile]');
     if (!shortcut) return;
-    const container = containers.find((candidate) => candidate.id === shortcut.dataset.openContainer);
-    if (container?.primaryUrl) openWithContainer(container.id, container.primaryUrl);
-    else openContainerDialog(container);
+    native.newWindow(shortcut.dataset.openProfile);
   };
   $('#containerChooser').onclick = (event) => {
     const existing = event.target.closest('[data-route-container]');
@@ -266,7 +304,8 @@
 
   $('#permissionsButton').onclick = async () => {
     if (!activeTab()) return showToast('Open a site to view its permissions');
-    activeContainer = await native.getActiveContainer();
+    activePrivacy = await native.getActivePrivacy();
+    activeContainer = activePrivacy?.compartment || null;
     renderPermissions();
     const show = $('#permissionsPopover').hidden;
     closePopovers();
@@ -277,12 +316,14 @@
   $('#permissionControls').onchange = async (event) => {
     const input = event.target.closest('[data-permission]');
     if (!input || !activeContainer) return;
-    activeContainer = await native.setContainerPermission(activeContainer.id, input.dataset.permission, input.checked);
+    activeContainer = await native.setCompartmentPermission(activePrivacy.profile.id, activeContainer.id, input.dataset.permission, input.checked);
+    activePrivacy = await native.getActivePrivacy();
     renderPermissions();
   };
   $('#permissionPreset').onchange = async (event) => {
-    if (!activeContainer || event.target.value === 'custom') return;
-    activeContainer = await native.applyContainerPreset(activeContainer.id, event.target.value);
+    if (!activeContainer || !activePrivacy) return;
+    activeContainer = await native.setCompatibilityLevel(activePrivacy.profile.id, activeContainer.id, Number(event.target.value));
+    activePrivacy = await native.getActivePrivacy();
     renderPermissions();
   };
 
@@ -299,14 +340,50 @@
   $('#manageContainersMenuItem').onclick = async () => {
     closePopovers();
     await native.showDashboard();
-    openContainerDialog(containers.find((container) => !container.temporary) || null, true);
+    await openProfileDialog(activePrivacy?.profile?.id || tabState.profileId || profiles[0]?.id);
   };
   $('#newWindowMenuItem').onclick = () => { native.newWindow(); closePopovers(); };
   $('#quitReleaseMenuItem').onclick = () => native.quitAndRelease();
-  $('#createContainerButton').onclick = () => openContainerDialog();
+  $('#createContainerButton').onclick = async () => {
+    const profile = await native.createProfile({ name: `Profile ${profiles.length + 1}` });
+    await refreshContainers();
+    await openProfileDialog(profile.id);
+  };
   $('#containerPicker').onchange = (event) => {
     const container = containers.find((candidate) => candidate.id === event.target.value) || null;
     populateContainerForm(container);
+  };
+  $('#profilePicker').onchange = (event) => openProfileDialog(event.target.value);
+  $('#profileForm').onsubmit = async (event) => {
+    event.preventDefault();
+    const profileId = $('#profileDialog').dataset.profileId;
+    await native.updateProfile(profileId, { name: $('#profileName').value.trim() });
+    if ($('#profileGoogleFamily').checked) await native.authorizeFamily(profileId, 'google');
+    $('#profileDialog').close();
+    await refreshContainers();
+  };
+  $('#profileCompartments').onclick = async (event) => {
+    const button = event.target.closest('[data-clear-site]');
+    if (!button) return;
+    const profileId = $('#profileDialog').dataset.profileId;
+    if (!confirm('Clear cookies, logins, cache, and site storage for this compartment?')) return;
+    await native.clearCompartment(profileId, button.dataset.clearSite);
+    showToast('Site compartment data cleared');
+  };
+  $('#profileAllowances').onclick = async (event) => {
+    const pin = event.target.closest('[data-pin-allowance]');
+    const remove = event.target.closest('[data-remove-allowance]');
+    const profileId = $('#profileDialog').dataset.profileId;
+    if (pin) await native.pinCompatibilityAllowance(profileId, pin.dataset.site, pin.dataset.pinAllowance);
+    if (remove) await native.removeCompatibilityAllowance(profileId, remove.dataset.site, remove.dataset.removeAllowance);
+    await openProfileDialog(profileId);
+  };
+  $('#removeProfileButton').onclick = async () => {
+    const profileId = $('#profileDialog').dataset.profileId;
+    if (!confirm('Remove this profile and only its site data? Other profiles are not affected.')) return;
+    await native.removeProfile(profileId);
+    $('#profileDialog').close();
+    await refreshContainers();
   };
   document.querySelectorAll('[data-close-popover]').forEach((button) => { button.onclick = closePopovers; });
 

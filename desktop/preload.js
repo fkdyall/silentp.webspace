@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('silentP', {
   removeProfile: (profileId) => ipcRenderer.invoke('profiles:remove', profileId),
   authorizeFamily: (profileId, providerId) => ipcRenderer.invoke('profiles:authorize-family', profileId, providerId),
   listCompartments: (profileId) => ipcRenderer.invoke('compartments:list', profileId),
+  createCompartment: (profileId, input) => ipcRenderer.invoke('compartments:create', profileId, input),
   clearCompartment: (profileId, compartmentId) => ipcRenderer.invoke('compartments:clear', profileId, compartmentId),
   routeProfileUrl: (url) => ipcRenderer.invoke('profiles:route-url', url),
   getActivePrivacy: () => ipcRenderer.invoke('privacy:get-active'),
@@ -18,6 +19,7 @@ contextBridge.exposeInMainWorld('silentP', {
     ipcRenderer.invoke('compartments:set-permission', profileId, compartmentId, permission, allowed),
   setCompatibilityLevel: (profileId, compartmentId, level) =>
     ipcRenderer.invoke('compatibility:set-level', profileId, compartmentId, level),
+  listCompatibilityAllowances: (profileId) => ipcRenderer.invoke('compatibility:list', profileId),
   addCompatibilityAllowance: (input) => ipcRenderer.invoke('compatibility:add', input),
   pinCompatibilityAllowance: (profileId, compartmentId, allowanceId) =>
     ipcRenderer.invoke('compatibility:pin', profileId, compartmentId, allowanceId),
@@ -45,7 +47,7 @@ contextBridge.exposeInMainWorld('silentP', {
   releaseInactiveTabs: () => ipcRenderer.invoke('tabs:release-inactive'),
   setPrivacyPreset: (tabId, preset) => ipcRenderer.invoke('tabs:set-preset', tabId, preset),
   detachTab: (tabId) => ipcRenderer.invoke('tabs:detach', tabId),
-  newWindow: () => ipcRenderer.invoke('window:new'),
+  newWindow: (profileId) => ipcRenderer.invoke('window:new', profileId),
 
   showDashboard: () => ipcRenderer.invoke('browser:dashboard'),
   setChromeHeight: (height) => ipcRenderer.invoke('browser:set-chrome-height', height),

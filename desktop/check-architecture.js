@@ -7,6 +7,7 @@ const read = (relative) => fs.readFileSync(path.join(__dirname, relative), 'utf8
 const main = read('main.js');
 const preload = read('preload.js');
 const app = read('../web/app.js');
+const uiModel = read('../web/ui-model.js');
 const html = read('../web/index.html');
 const packageConfig = JSON.parse(read('package.json'));
 
@@ -38,10 +39,14 @@ const requirements = [
   [preload.includes('getActivePrivacy'), 'preload bridge must expose active profile/site privacy state'],
   [preload.includes('setCompatibilityLevel'), 'preload bridge must expose scoped compatibility levels'],
   [app.includes('tabList'), 'web interface must render the native tab strip'],
-  [app.includes('routeUrl'), 'address bar must route through saved containers'],
+  [app.includes('routeProfileUrl'), 'address bar must route within the window profile'],
+  [app.includes('getActivePrivacy'), 'site control must load active profile and compartment privacy state'],
+  [uiModel.includes('privacyViewModel'), 'site control must use a profile/site-aware view model'],
   [html.includes('containerChooser'), 'multiple container matches must render a chooser'],
   [html.includes('newTabView'), 'browser must expose an immediate new-tab surface'],
   [html.includes('permissionsPopover'), 'browser chrome must expose live site permissions'],
+  [html.includes('privacyBlocked'), 'browser chrome must expose blocked request count'],
+  [html.includes('profileDialog'), 'profile management must be available from browser chrome'],
   [html.includes('Exit &amp; Free Resources'), 'public resource-release label must remain generic'],
   [packageConfig.name === 'silent-p-pwsa-desktop', 'migration build must retain the legacy npm package identity'],
   [packageConfig.build.appId === 'com.fypm.silentpwebspace', 'migration build must retain the legacy application ID'],

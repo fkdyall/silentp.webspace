@@ -28,8 +28,8 @@
         <input id="addressInput" autocomplete="off" spellcheck="false" aria-label="Search or enter address" placeholder="Search or enter address">
         <div class="container-chooser" id="containerChooser" hidden></div>
       </form>
-      <button class="container-badge" id="containerBadge" title="Current container"><span class="container-dot" id="containerDot"></span><span id="containerName">New tab</span></button>
-      <button class="chrome-button" id="permissionsButton" title="Site permissions" aria-expanded="false">◆</button>
+      <button class="container-badge" id="containerBadge" title="Current profile and site"><span class="container-dot" id="containerDot"></span><span id="containerName">New tab</span></button>
+      <button class="chrome-button" id="permissionsButton" title="Site privacy and permissions" aria-expanded="false">◆</button>
       <div class="download-chip" id="downloadChip" hidden></div>
     </nav>
 
@@ -43,23 +43,30 @@
           <button type="submit">Go</button>
         </form>
         <section class="shortcut-section">
-          <div class="section-heading"><h2>Containers</h2><button id="createContainerButton">New isolated container</button></div>
+          <div class="section-heading"><h2>Profiles</h2><button id="createContainerButton">New profile</button></div>
           <div class="shortcut-grid" id="containerShortcuts"></div>
         </section>
       </div>
     </main>
 
     <aside class="popover permissions-popover" id="permissionsPopover" hidden>
-      <header><div><strong id="permissionsContainerName">Container</strong><small id="permissionsPreset">Preset: Hardened</small></div><button data-close-popover="permissionsPopover">×</button></header>
+      <header><div><strong id="permissionsContainerName">Site</strong><small id="permissionsPreset">Hardened</small></div><button data-close-popover="permissionsPopover">×</button></header>
+      <dl class="privacy-summary">
+        <div><dt>Profile</dt><dd id="privacyProfile">—</dd></div>
+        <div><dt>Site compartment</dt><dd id="privacyCompartment">—</dd></div>
+        <div><dt>Blocked</dt><dd id="privacyBlocked">0</dd></div>
+        <div><dt>Identity provider</dt><dd id="privacyProvider">None</dd></div>
+      </dl>
       <div class="permission-controls" id="permissionControls"></div>
-      <label class="preset-row"><span>Apply template</span><select id="permissionPreset"><option value="custom">Custom</option><option value="hardened">Hardened</option><option value="balanced">Balanced</option><option value="compatibility">Compatibility</option></select></label>
+      <label class="preset-row"><span>Compatibility level</span><select id="permissionPreset"><option value="0">0 · Hardened</option><option value="1">1 · Authentication</option><option value="2">2 · Narrow third party</option><option value="3">3 · Site compatibility</option></select></label>
+      <section class="allowance-list"><strong>Temporary exceptions</strong><div id="temporaryAllowances">None</div></section>
     </aside>
 
     <aside class="popover main-menu" id="mainMenu" hidden>
       <button id="keepActiveMenuItem">Keep Active: Off</button>
       <button id="parkTabMenuItem">Park current tab</button>
       <button id="releaseInactiveMenuItem">Release inactive</button>
-      <button id="manageContainersMenuItem">Manage containers</button>
+      <button id="manageContainersMenuItem">Manage profiles</button>
       <button id="newWindowMenuItem">New window</button>
       <hr>
       <button class="danger" id="quitReleaseMenuItem">Exit &amp; Free Resources</button>
@@ -79,7 +86,20 @@
     </form>
   </dialog>
 
+  <dialog id="profileDialog">
+    <form method="dialog" class="dialog-shell" id="profileForm">
+      <header><div><p class="eyebrow">PROFILE CONTAINER</p><h2>Manage profiles</h2></div><button value="cancel" aria-label="Close">×</button></header>
+      <label>Profile<select id="profilePicker"></select></label>
+      <label>Name<input id="profileName" required></label>
+      <label class="inline-check"><span>Authorize Google identity/site family</span><input type="checkbox" id="profileGoogleFamily"></label>
+      <section class="manager-section"><h3>Persistent site compartments</h3><div id="profileCompartments"></div></section>
+      <section class="manager-section"><h3>Compatibility allowances</h3><div id="profileAllowances"></div></section>
+      <div class="dialog-actions"><button type="button" class="danger" id="removeProfileButton">Remove profile</button><span></span><button value="cancel">Close</button><button type="submit" value="default" class="primary">Save</button></div>
+    </form>
+  </dialog>
+
   <div class="toast" id="toast" hidden></div>
+  <script src="./ui-model.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>

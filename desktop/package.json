@@ -19,7 +19,7 @@
   "scripts": {
     "start": "electron .",
     "test:clipboard": "node test-clipboard-permissions.js",
-    "check": "node test-profile-model.js && node test-privacy-policy.js && node test-container-model.js && node test-state-store.js && node test-context-menu.js && node test-clipboard-permissions.js && node --check bootstrap.js && node --check clipboard-permissions.js && node --check profile-model.js && node --check privacy-policy.js && node --check container-model.js && node --check state-store.js && node --check context-menu.js && node --check main.js && node --check preload.js && node --check security.js && node --check ../web/app.js && node check-architecture.js",
+    "check": "node test-profile-model.js && node test-privacy-policy.js && node test-browser-ui.js && node test-container-model.js && node test-state-store.js && node test-context-menu.js && node test-clipboard-permissions.js && node --check bootstrap.js && node --check clipboard-permissions.js && node --check profile-model.js && node --check privacy-policy.js && node --check container-model.js && node --check state-store.js && node --check context-menu.js && node --check main.js && node --check preload.js && node --check security.js && node --check ../web/ui-model.js && node --check ../web/app.js && node check-architecture.js",
     "dist:linux": "electron-builder --linux AppImage --publish never",
     "dist:win": "electron-builder --win portable --publish never",
     "dist:linux:all": "electron-builder --linux AppImage deb --publish never",
