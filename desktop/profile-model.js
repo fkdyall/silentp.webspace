@@ -182,6 +182,33 @@ function callbackBelongsToOrigin(callbackUrl, origin) {
   }
 }
 
+function popupRouteForTarget(context) {
+  return oauthRoute(context);
+}
+
+function permissionAllowed(compartment, permission, details = {}) {
+  const permissions = compartment?.permissions || {};
+  if (permission === 'media') {
+    const requested = details.mediaTypes || [];
+    if (!requested.length) return Boolean(permissions.camera || permissions.microphone);
+    return requested.every((type) => type === 'audio'
+      ? Boolean(permissions.microphone)
+      : type === 'video' && Boolean(permissions.camera));
+  }
+  const map = {
+    geolocation: permissions.location,
+    notifications: permissions.notifications,
+    clipboardRead: permissions.clipboard,
+    clipboardSanitizedWrite: permissions.clipboard,
+    uploads: permissions.uploads,
+    downloads: permissions.downloads,
+    fullscreen: true,
+    pointerLock: false,
+    openExternal: false
+  };
+  return Boolean(map[permission]);
+}
+
 module.exports = {
   PROVIDERS,
   normalizeProfile,
@@ -193,6 +220,8 @@ module.exports = {
   validateTabOwnership,
   partitionKeysForProfile,
   callbackBelongsToOrigin,
+  popupRouteForTarget,
+  permissionAllowed,
   hostForUrl,
   hostMatchesRule
 };

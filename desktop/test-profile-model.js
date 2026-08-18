@@ -9,7 +9,9 @@ const {
   oauthRoute,
   validateTabOwnership,
   partitionKeysForProfile,
-  callbackBelongsToOrigin
+  callbackBelongsToOrigin,
+  popupRouteForTarget,
+  permissionAllowed
 } = require('./profile-model');
 
 const profileA = normalizeProfile({
@@ -100,6 +102,19 @@ assert.deepEqual(
 );
 assert.equal(callbackBelongsToOrigin('https://relying.example/callback?code=abc', 'https://relying.example'), true);
 assert.equal(callbackBelongsToOrigin('https://relying.example.evil.test/callback', 'https://relying.example'), false);
+assert.equal(
+  popupRouteForTarget({
+    profile: profileA,
+    originCompartment: relyingPartyA,
+    compartments,
+    targetUrl: 'https://accounts.google.com/o/oauth2/v2/auth'
+  }).compartmentId,
+  googleA.id
+);
+assert.equal(permissionAllowed({ permissions: { microphone: true, camera: false } }, 'media', { mediaTypes: ['audio'] }), true);
+assert.equal(permissionAllowed({ permissions: { microphone: true, camera: false } }, 'media', { mediaTypes: ['video'] }), false);
+assert.equal(permissionAllowed({ permissions: { uploads: true, downloads: true } }, 'uploads'), true);
+assert.equal(permissionAllowed({ permissions: { uploads: true, downloads: true } }, 'downloads'), true);
 
 const legacy = normalizeCompartment({
   id: 'legacy-google', profileId: profileA.id, key: 'family:google',
