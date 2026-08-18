@@ -75,7 +75,7 @@
       ]
     },
     "appImage": {
-      "artifactName": "FYPM-Browser-${version}-linux-${arch}.${ext}"
+      "artifactName": "FYPM-Browser-hierarchical-test-${version}-linux-${arch}.${ext}"
     },
     "deb": {
       "artifactName": "FYPM-Browser-${version}-linux-${arch}.${ext}",

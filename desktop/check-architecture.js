@@ -52,7 +52,7 @@ const requirements = [
   [packageConfig.build.appId === 'com.fypm.silentpwebspace', 'migration build must retain the legacy application ID'],
   [packageConfig.productName === 'FYPM Browser', 'visible product name must be FYPM Browser'],
   [packageConfig.build.executableName === 'fypm-browser', 'Linux executable must be fypm-browser'],
-  [packageConfig.build.appImage.artifactName === 'FYPM-Browser-${version}-linux-${arch}.${ext}', 'AppImage artifact naming must use FYPM Browser'],
+  [packageConfig.build.appImage.artifactName === 'FYPM-Browser-hierarchical-test-${version}-linux-${arch}.${ext}', 'AppImage artifact naming must remain separate from the working FYPM Browser build'],
   [!main.includes('AUTO_RELEASE_ON_MINIMIZE'), 'minimizing must not automatically kill an AI companion tab']
 ];
 
