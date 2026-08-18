@@ -4,17 +4,7 @@ const TRACKING = new Set([
   'ad_id', 'adgroup'
 ]);
 
-const BLOCKED_HOST_PARTS = [
-  'doubleclick.net',
-  'googlesyndication.com',
-  'google-analytics.com',
-  'analytics.google.com',
-  'facebook.net',
-  'scorecardresearch.com',
-  'hotjar.com',
-  'clarity.ms',
-  'segment.io'
-];
+const { isKnownTracker } = require('./privacy-policy');
 
 function stripTracking(input) {
   try {
@@ -31,12 +21,7 @@ function stripTracking(input) {
 }
 
 function shouldBlock(input) {
-  try {
-    const host = new URL(input).hostname.toLowerCase();
-    return BLOCKED_HOST_PARTS.some((part) => host === part || host.endsWith(`.${part}`));
-  } catch {
-    return false;
-  }
+  return isKnownTracker(input);
 }
 
 module.exports = { stripTracking, shouldBlock };
